@@ -34,7 +34,7 @@ contract GuardianPoCs is SoladyTest {
     function setUp() public {
         vm.prank(owner);
         dn = new MintNextDN404("DN", "DN", 10e18, owner);
-        mirror = new DN404Mirror(address(this));
+        mirror = DN404Mirror(payable(dn.mirrorERC721()));
     }
 
     function test_steal_reminted_nft() public {
@@ -50,11 +50,17 @@ contract GuardianPoCs is SoladyTest {
 
         assertTrue(nftSupply == 10);
 
+        // Burn pool is initially empty
+        (uint256 head, uint256 tail) = dn.getBurnedPool();
+
+        assertTrue(head == 0);
+        assertTrue(tail == 0);
+
         // burn some of the initial tokens, the burn pool is now populated
         vm.prank(owner);
         dn.burn(alice, 1e18);
 
-        (uint256 head, uint256 tail) = dn.getBurnedPool();
+        (head, tail) = dn.getBurnedPool();
 
         assertTrue(head == 0);
         assertTrue(tail == 1);
@@ -64,10 +70,7 @@ contract GuardianPoCs is SoladyTest {
         dn.mintNext(bob, 1e18);
 
         // Bob owns token with id 10
-        (success, data) = address(dn).call(abi.encodeWithSelector(0x6352211e, 10)); // `ownerOf(uint256)`.
-        require(success);
-
-        address ownerOfTen = abi.decode(data, (address));
+        address ownerOfTen = mirror.ownerOf(10);
 
         vm.assertTrue(ownerOfTen == bob);
 
@@ -76,10 +79,7 @@ contract GuardianPoCs is SoladyTest {
         vm.prank(owner);
         dn.mint(alice, 1e18);
 
-        (success, data) = address(dn).call(abi.encodeWithSelector(0x6352211e, 10)); // `ownerOf(uint256)`.
-        require(success);
-
-        ownerOfTen = abi.decode(data, (address));
+        ownerOfTen = mirror.ownerOf(10);
 
         vm.assertTrue(ownerOfTen == alice);
     }

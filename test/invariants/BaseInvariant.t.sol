@@ -5,7 +5,7 @@ import {Test} from "../utils/forge-std/Test.sol";
 import {StdInvariant} from "../utils/forge-std/StdInvariant.sol";
 import {DN404} from "../../src/DN404.sol";
 import {DN404Mirror} from "../../src/DN404Mirror.sol";
-import {MockDN404} from "../utils/mocks/MockDN404.sol";
+import {MockDN404CustomUnit} from "../utils/mocks/MockDN404CustomUnit.sol";
 import {DN404Handler} from "./handlers/DN404Handler.sol";
 
 // forgefmt: disable-start
@@ -30,14 +30,17 @@ contract BaseInvariantTest is Test, StdInvariant {
     address user3 = vm.addr(uint256(keccak256("User3")));
     address user4 = vm.addr(uint256(keccak256("User4")));
     address user5 = vm.addr(uint256(keccak256("User5")));
+    address[] users = [user0, user1, user2, user3, user4, user5];
+
     uint256 private constant _WAD = 1000000000000000000;
 
-    MockDN404 dn404;
+    MockDN404CustomUnit dn404;
     DN404Mirror dn404Mirror;
     DN404Handler dn404Handler;
 
     function setUp() external virtual {
-        dn404 = new MockDN404();
+        dn404 = new MockDN404CustomUnit();
+        dn404.setUnit(10 ** 18);
         dn404Mirror = new DN404Mirror(address(this));
         dn404.initializeDN404(0, address(0), address(dn404Mirror));
 

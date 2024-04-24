@@ -3,7 +3,10 @@ pragma solidity ^0.8.4;
 
 import "../../utils/SoladyTest.sol";
 import {MockDN404} from "../../utils/mocks/MockDN404.sol";
+import {MockDN404CustomUnit} from "../../utils/mocks/MockDN404CustomUnit.sol";
 import {DN404Mirror} from "../../../src/DN404Mirror.sol";
+import {DN404} from "../../../src/DN404.sol";
+import "test/utils/forge-std/console.sol";
 
 contract DN404Handler is SoladyTest {
     uint256 private constant _WAD = 1000000000000000000;
@@ -11,7 +14,7 @@ contract DN404Handler is SoladyTest {
         0x0000000000000000000000000000000000000000000000a20d6e21d0e5255308;
     uint8 internal constant _ADDRESS_DATA_SKIP_NFT_FLAG = 1 << 1;
 
-    MockDN404 dn404;
+    MockDN404CustomUnit dn404;
     DN404Mirror mirror;
 
     address user0 = vm.addr(uint256(keccak256("User0")));
@@ -27,7 +30,7 @@ contract DN404Handler is SoladyTest {
 
     event Transfer(address indexed from, address indexed to, uint256 indexed id);
 
-    constructor(MockDN404 _dn404) {
+    constructor(MockDN404CustomUnit _dn404) {
         dn404 = _dn404;
         mirror = DN404Mirror(payable(dn404.mirrorERC721()));
 

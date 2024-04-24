@@ -177,4 +177,26 @@ contract MockDN404 is DN404 {
             mstore(0x10, id)
         }
     }
+
+    function burnedPoolIds() public view returns(uint256[] memory burnedIds) {
+        DN404Storage storage $ = _getDN404Storage();
+        uint32 tail = $.burnedPoolTail;
+        uint32 head = $.burnedPoolHead;
+        uint256 id;
+        burnedIds = new uint256[](tail - head);
+        // Iterate and populate the array
+        uint256 index = 0;
+        while (head < tail) {
+            id = _get($.burnedPool, head++);
+            burnedIds[index++] = id;
+        }
+    }
+
+    function balanceOfNFT(address owner) public view returns (uint256) {
+        return _balanceOfNFT(owner);
+    }
+
+    function getApproved(uint256 id) public view returns (address) {
+        return _getApproved(id);
+    }
 }

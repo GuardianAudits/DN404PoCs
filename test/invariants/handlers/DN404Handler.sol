@@ -171,16 +171,29 @@ contract DN404Handler is SoladyTest {
     }
 
     function mint(uint256 toIndexSeed, uint256 amount) external {
+        // PRE-CONDITIONS
         address to = randomAddress(toIndexSeed);
         amount = _bound(amount, 0, 100e18);
 
         uint256 toBalanceBefore = dn404.balanceOf(to);
+         uint256 totalSupplyBefore = dn404.totalSupply();
 
+        // ACTION
         dn404.mint(to, amount);
 
+        // POST-CONDITIONS
         if (!dn404.getSkipNFT(to)) {
             nftsOwned[to] = (toBalanceBefore + amount) / _WAD;
+            uint256[] memory tokensAfter = dn404.tokensOf(to);
+            assertEq(tokensAfter.length, nftsOwned[to], "owned != len(tokensOf)");
         }
+
+        uint256 toBalanceAfter = dn404.balanceOf(to);
+        uint256 totalSupplyAfter = dn404.totalSupply();
+        // Assert user balance increased by minted amount.
+        assertEq(toBalanceAfter, toBalanceBefore + amount, "balance after != balance before + amount");
+        // Assert totalSupply increased by minted amount.
+        assertEq(totalSupplyBefore + amount, totalSupplyAfter, "supply after != supply before + amount");
     }
 
     function burn(uint256 fromIndexSeed, uint256 amount) external {

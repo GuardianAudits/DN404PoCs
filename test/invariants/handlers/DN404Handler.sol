@@ -196,6 +196,48 @@ contract DN404Handler is SoladyTest {
         assertEq(totalSupplyBefore + amount, totalSupplyAfter, "supply after != supply before + amount");
     }
 
+    function mintNext(uint256 toIndexSeed, uint256 amount) public {
+        // PRE-CONDITIONS
+        address to = randomAddress(toIndexSeed);
+        amount = _bound(amount, 0, 100e18);
+
+        uint256 toBalanceBefore = dn404.balanceOf(to);
+        uint256 totalSupplyBefore = dn404.totalSupply();
+        uint256[] memory burnedIds = dn404.burnedPoolIds();
+
+        // ACTION
+        vm.recordLogs();
+        dn404.mintNext(to, amount);
+        
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        uint256 id;
+        for (uint256 i = 0; i < logs.length; i++) {
+            console.logBytes32(logs[i].topics[0]);
+            if (logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
+                // Grab minted ID from logs.
+                if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
+
+                for (uint j = 0; j < burnedIds.length; j++) {
+                    console.log("Burned Ids:", burnedIds[j]);
+                    // ❌ Assert mintNext does not overlap with burned pool.
+                    assertNotEq(burnedIds[j], id, "mint next went over burned ids");
+                }
+            }
+        }
+
+        if (!dn404.getSkipNFT(to)) {
+            nftsOwned[to] = (toBalanceBefore + amount) / _WAD;
+            uint256[] memory tokensAfter = dn404.tokensOf(to);
+            assertEq(tokensAfter.length, nftsOwned[to], "owned != len(tokensOf)");
+        }
+
+        uint256 toBalanceAfter = dn404.balanceOf(to);
+        uint256 totalSupplyAfter = dn404.totalSupply();
+        assertEq(toBalanceAfter, toBalanceBefore + amount, "balance after != balance before + amount");
+        assertEq(totalSupplyBefore + amount, totalSupplyAfter, "supply before +amount != supply after");
+    }
+
     function burn(uint256 fromIndexSeed, uint256 amount) external {
         address from = randomAddress(fromIndexSeed);
         vm.startPrank(from);
@@ -273,5 +315,35 @@ contract DN404Handler is SoladyTest {
         assembly {
             z := mul(gt(x, y), sub(x, y))
         }
+    }
+
+    function setUseExistsLookup(bool value) public {
+       dn404.setUseExistsLookup(value);
+    }
+
+     function setUseDirectTransfersIfPossible(bool value) public {
+        dn404.setUseDirectTransfersIfPossible(value);
+    }
+
+    function setAddToBurnedPool(bool value) public {
+        dn404.setAddToBurnedPool(value);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                     POCS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function poc_mintnext_overlap_burned_ids_without_burn() public {
+        //  [FAIL. Reason: mint next went over burned ids: 13 == 13]
+        // 	[Sequence]
+        // 	sender=0x6c04248eEAd24C0a5327Da4857e085D599CADCbf addr=[test/invariants/handlers/DN404Handler.sol:DN404Handler]0xF62849F9A0B5Bf2913b396098F7c7019b51A820a calldata=mint(uint256,uint256) args=[115792089237316195423570985008687907853269984665640564039457584007913129639934 [1.157e77], 15708559942556327919058285537 [1.57e28]]
+        this.mint(115792089237316195423570985008687907853269984665640564039457584007913129639934, 42556327918744114339);
+        // 	sender=0x000000c600000000000000000000000100000003 addr=[test/invariants/handlers/DN404Handler.sol:DN404Handler]0xF62849F9A0B5Bf2913b396098F7c7019b51A820a calldata=setAddToBurnedPool(bool) args=[true]
+        setAddToBurnedPool(true);
+        // 	sender=0x0000000000000000000000019689C70d4e933Ed5 addr=[test/invariants/handlers/DN404Handler.sol:DN404Handler]0xF62849F9A0B5Bf2913b396098F7c7019b51A820a calldata=transfer(uint256,uint256,uint256) args=[3613691728762 [3.613e12], 97416 [9.741e4], 48535295050378615425577907356361192661480127285716589363808434126849 [4.853e67]]
+        this.transfer(3613691728762 , 97416 , 48535295050378615425577907356361192661480127285716589363808434126849);
+        // 	sender=0x0000000000000000000000000000000000018158 addr=[test/invariants/handlers/DN404Handler.sol:DN404Handler]0xF62849F9A0B5Bf2913b396098F7c7019b51A820a calldata=mintNext(uint256,uint256) args=[109965082468 [1.099e11], 22859867009474803402833385750641289444944960863979897771692941901824 [2.285e67]]
+        this.mintNext(109965082468, 22859867009474803402833385750641289444944960863979897771692941901824);
+        //  invariantMirrorAndBaseRemainImmutable() (runs: 10315, calls: 103146, reverts: 1) 
     }
 }

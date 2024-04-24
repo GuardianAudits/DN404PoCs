@@ -65,33 +65,58 @@ contract DN404Handler is SoladyTest {
     }
 
     function approve(uint256 ownerIndexSeed, uint256 spenderIndexSeed, uint256 amount) external {
+        // PRE-CONDITIONS
         address owner = randomAddress(ownerIndexSeed);
         address spender = randomAddress(spenderIndexSeed);
 
         if (owner == spender) return;
 
+        // ACTION
         vm.startPrank(owner);
         dn404.approve(spender, amount);
+
+        // POST-CONDITIONS
+        assertEq(dn404.allowance(owner, spender), amount, "Allowance != Amount");
     }
 
     function transfer(uint256 fromIndexSeed, uint256 toIndexSeed, uint256 amount) external {
+        // PRE-CONDITIONS
         address from = randomAddress(fromIndexSeed);
         address to = randomAddress(toIndexSeed);
         amount = _bound(amount, 0, dn404.balanceOf(from));
         vm.startPrank(from);
 
-        uint256 fromPreBalance = dn404.balanceOf(from);
-        uint256 toPreBalance = dn404.balanceOf(to);
+        uint256 fromBalanceBefore = dn404.balanceOf(from);
+        uint256 toBalanceBefore = dn404.balanceOf(to);
+        uint256 totalSupplyBefore = dn404.totalSupply();
 
+        // ACTION
         dn404.transfer(to, amount);
 
+        // POST-CONDITIONS
         uint256 fromNFTPreOwned = nftsOwned[from];
 
-        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromPreBalance - amount) / _WAD);
+        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromBalanceBefore - amount) / _WAD);
         if (!dn404.getSkipNFT(to)) {
-            if (from == to) toPreBalance -= amount;
-            nftsOwned[to] += _zeroFloorSub((toPreBalance + amount) / _WAD, nftsOwned[to]);
+            if (from == to) toBalanceBefore -= amount;
+            nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / _WAD, nftsOwned[to]);
         }
+
+        uint256 fromBalanceAfter = dn404.balanceOf(from);
+        uint256 toBalanceAfter = dn404.balanceOf(to);
+        uint256 totalSupplyAfter = dn404.totalSupply();
+
+        // Assert balance updates between addresses are valid.
+        if (from != to) {
+            assertEq(fromBalanceAfter + amount, fromBalanceBefore, "balance after + amount != balance before");
+            assertEq(toBalanceAfter, toBalanceBefore + amount, "balance After != balance Before + amount");
+        }
+        else {
+            assertEq(fromBalanceAfter, fromBalanceBefore, "balance after != balance before");
+        }
+        
+        // Assert totalSupply stays the same.
+        assertEq(totalSupplyBefore, totalSupplyAfter, "total supply before != total supply after");
     }
 
     function transferFrom(
@@ -106,8 +131,8 @@ contract DN404Handler is SoladyTest {
         amount = _bound(amount, 0, dn404.balanceOf(from));
         vm.startPrank(sender);
 
-        uint256 fromPreBalance = dn404.balanceOf(from);
-        uint256 toPreBalance = dn404.balanceOf(to);
+        uint256 fromBalanceBefore = dn404.balanceOf(from);
+        uint256 toBalanceBefore = dn404.balanceOf(to);
 
         if (dn404.allowance(from, sender) < amount) {
             sender = from;
@@ -118,10 +143,10 @@ contract DN404Handler is SoladyTest {
 
         uint256 fromNFTPreOwned = nftsOwned[from];
 
-        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromPreBalance - amount) / _WAD);
+        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromBalanceBefore - amount) / _WAD);
         if (!dn404.getSkipNFT(to)) {
-            if (from == to) toPreBalance -= amount;
-            nftsOwned[to] += _zeroFloorSub((toPreBalance + amount) / _WAD, nftsOwned[to]);
+            if (from == to) toBalanceBefore -= amount;
+            nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / _WAD, nftsOwned[to]);
         }
     }
 
@@ -129,12 +154,12 @@ contract DN404Handler is SoladyTest {
         address to = randomAddress(toIndexSeed);
         amount = _bound(amount, 0, 100e18);
 
-        uint256 toPreBalance = dn404.balanceOf(to);
+        uint256 toBalanceBefore = dn404.balanceOf(to);
 
         dn404.mint(to, amount);
 
         if (!dn404.getSkipNFT(to)) {
-            nftsOwned[to] = (toPreBalance + amount) / _WAD;
+            nftsOwned[to] = (toBalanceBefore + amount) / _WAD;
         }
     }
 
@@ -143,11 +168,11 @@ contract DN404Handler is SoladyTest {
         vm.startPrank(from);
         amount = _bound(amount, 0, dn404.balanceOf(from));
 
-        uint256 fromPreBalance = dn404.balanceOf(from);
+        uint256 fromBalanceBefore = dn404.balanceOf(from);
 
         dn404.burn(from, amount);
 
-        nftsOwned[from] -= _zeroFloorSub(nftsOwned[from], (fromPreBalance - amount) / _WAD);
+        nftsOwned[from] -= _zeroFloorSub(nftsOwned[from], (fromBalanceBefore - amount) / _WAD);
     }
 
     function setSkipNFT(uint256 actorIndexSeed, bool status) external {

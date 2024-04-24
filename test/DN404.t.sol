@@ -383,6 +383,15 @@ contract DN404Test is SoladyTest {
         }
     }
 
+    function _randomizeConfigurations(address[] memory addresses) internal {
+        if (_random() % 2 == 0) dn.setAddToBurnedPool(_random() % 2 == 0);
+        if (_random() % 4 == 0) dn.setUseDirectTransfersIfPossible(_random() % 2 == 0);
+        if (_random() % 8 == 0) {
+            vm.prank(addresses[_random() % addresses.length]);
+            dn.setSkipNFT(_random() & 1 == 0);
+        }
+    }
+
     function testMixed(bytes32) public {
         dn.setUseExistsLookup(_random() % 2 == 0);
 
@@ -428,17 +437,10 @@ contract DN404Test is SoladyTest {
 
     function _testMixed(address[] memory addresses) internal {
         do {
-            if (_random() % 4 == 0) dn.setAddToBurnedPool(_random() % 2 == 0);
-
-            if (_random() % 4 == 0) dn.setUseDirectTransfersIfPossible(_random() % 2 == 0);
-
-            if (_random() % 16 > 0) {
-                _doRandomTransfer(addresses);
-                _maybeCheckInvariants(addresses);
-            }
-
-            if (_random() % 4 == 0) dn.setUseDirectTransfersIfPossible(_random() % 2 == 0);
-
+            _randomizeConfigurations(addresses);
+            if (_random() % 16 != 0) _doRandomTransfer(addresses);
+            _maybeCheckInvariants(addresses);
+            _randomizeConfigurations(addresses);
             if (_random() % 4 == 0) {
                 address from = addresses[_random() % addresses.length];
                 address to = addresses[_random() % addresses.length];
@@ -447,32 +449,18 @@ contract DN404Test is SoladyTest {
                 _maybeCheckInvariants(addresses);
                 dn.mint(to, amount);
             }
-
-            if (_random() % 4 == 0) {
-                vm.prank(addresses[_random() % addresses.length]);
-                dn.setSkipNFT(_random() & 1 == 0);
-            }
-
-            if (_random() % 2 == 0) dn.setAddToBurnedPool(_random() % 2 == 0);
-
+            _randomizeConfigurations(addresses);
             if (_random() % 4 == 0) _doRandomTransfer(addresses);
-
             _maybeCheckInvariants(addresses);
         } while (_random() % 4 == 0);
     }
 
     function _testMixed2(address[] memory addresses) internal {
         do {
-            dn.setAddToBurnedPool(_random() % 2 == 0);
-
-            if (_random() % 4 == 0) dn.setUseDirectTransfersIfPossible(_random() % 2 == 0);
-
+            _randomizeConfigurations(addresses);
             if (_random() % 2 == 0) _doRandomTransfer(addresses);
-
             _maybeCheckInvariants(addresses);
-
-            if (_random() % 4 == 0) dn.setUseDirectTransfersIfPossible(_random() % 2 == 0);
-
+            _randomizeConfigurations(addresses);
             if (_random() % 2 == 0) {
                 address from = addresses[_random() % addresses.length];
                 address to = addresses[_random() % addresses.length];
@@ -509,31 +497,18 @@ contract DN404Test is SoladyTest {
                     _maybeCheckInvariants(addresses);
                 }
             }
-
-            if (_random() % 4 == 0) {
-                vm.prank(addresses[_random() % addresses.length]);
-                dn.setSkipNFT(_random() & 1 == 0);
-            }
-
-            if (_random() % 2 == 0) dn.setAddToBurnedPool(_random() % 2 == 0);
-
+            _randomizeConfigurations(addresses);
             if (_random() % 4 == 0) _doRandomTransfer(addresses);
-
             _maybeCheckInvariants(addresses);
         } while (_random() % 4 == 0);
     }
 
     function _testMixed3(address[] memory addresses) internal {
         do {
-            dn.setAddToBurnedPool(_random() % 2 == 0);
-
-            if (_random() % 4 == 0) dn.setUseDirectTransfersIfPossible(_random() % 2 == 0);
-
+            _randomizeConfigurations(addresses);
             if (_random() % 2 == 0) _doRandomTransfer(addresses);
-
             _maybeCheckInvariants(addresses);
-
-            if (_random() % 4 == 0) dn.setUseDirectTransfersIfPossible(_random() % 2 == 0);
+            _randomizeConfigurations(addresses);
 
             if (_random() % 2 == 0) {
                 address to = addresses[_random() % addresses.length];
@@ -554,15 +529,8 @@ contract DN404Test is SoladyTest {
                 _maybeCheckInvariants(addresses);
             }
 
-            if (_random() % 4 == 0) {
-                vm.prank(addresses[_random() % addresses.length]);
-                dn.setSkipNFT(_random() & 1 == 0);
-            }
-
-            if (_random() % 2 == 0) dn.setAddToBurnedPool(_random() % 2 == 0);
-
+            _randomizeConfigurations(addresses);
             _doRandomTransfer(addresses);
-
             _maybeCheckInvariants(addresses);
         } while (_random() % 4 == 0);
     }

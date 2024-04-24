@@ -320,6 +320,7 @@ contract DN404Handler is SoladyTest {
         uint256 toIndexSeed,
         uint32 id
     ) external {
+        // PRE-CONDITIONS
         address sender = randomAddress(senderIndexSeed);
         address from = randomAddress(fromIndexSeed);
         address to = randomAddress(toIndexSeed);
@@ -333,12 +334,36 @@ contract DN404Handler is SoladyTest {
             sender = from;
         }
 
-        vm.startPrank(sender);
+        uint256 fromBalanceBefore = dn404.balanceOf(from);
+        uint256 toBalanceBefore = dn404.balanceOf(to);
 
+        // ACTION
+        vm.startPrank(sender);
         mirror.transferFrom(from, to, id);
 
+        // POST-CONDITIONS
         --nftsOwned[from];
         ++nftsOwned[to];
+
+        uint256[] memory tokensFromAfter = dn404.tokensOf(from);
+        uint256[] memory tokensToAfter = dn404.tokensOf(to);
+        uint256 fromBalanceAfter = dn404.balanceOf(from);
+        uint256 toBalanceAfter = dn404.balanceOf(to);
+
+        // Assert length matches internal tracking.
+        assertEq(tokensFromAfter.length, nftsOwned[from], "Owned != len(tokensOfFrom)");
+        assertEq(tokensToAfter.length, nftsOwned[to], "Owned != len(tokensOfTo)");
+        // Assert token balances for `from` and `to` was updated.
+        if (from != to) {
+            assertEq(fromBalanceBefore, fromBalanceAfter + dn404.unit(), "before != after + unit");
+            assertEq(toBalanceAfter, toBalanceBefore + dn404.unit(), "after != before + unit");
+        }
+        else {
+            assertEq(fromBalanceBefore, fromBalanceAfter, "before != after");
+            assertEq(toBalanceAfter, toBalanceBefore, "after != before");
+        }
+        // Assert `to` address owns the transferred NFT
+        assertEq(mirror.ownerAt(id), to, "to != ownerOf");
     }
 
     function _zeroFloorSub(uint256 x, uint256 y) private pure returns (uint256 z) {

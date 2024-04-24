@@ -177,4 +177,19 @@ contract MockDN404 is DN404 {
             mstore(0x10, id)
         }
     }
+
+    function burnedPool() public view returns (uint256[] memory result) {
+        unchecked {
+            DN404Storage storage $ = _getDN404Storage();
+            uint32 start = $.burnedPoolHead;
+            uint32 end = $.burnedPoolTail;
+            result = new uint256[](end - start);
+            uint256 i;
+            while (start != end) {
+                result[i] = _get($.burnedPool, start);
+                start++;
+                i++;
+            }
+        }
+    }
 }

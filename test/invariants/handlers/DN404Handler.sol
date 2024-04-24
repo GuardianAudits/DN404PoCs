@@ -333,7 +333,7 @@ contract DN404Handler is SoladyTest {
                                      POCS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function poc_mintnext_overlap_burned_ids_without_burn() public {
+    function poc_mintnext_overlap_burned_ids_without_burn() internal {
         //  [FAIL. Reason: mint next went over burned ids: 13 == 13]
         // 	[Sequence]
         // 	sender=0x6c04248eEAd24C0a5327Da4857e085D599CADCbf addr=[test/invariants/handlers/DN404Handler.sol:DN404Handler]0xF62849F9A0B5Bf2913b396098F7c7019b51A820a calldata=mint(uint256,uint256) args=[115792089237316195423570985008687907853269984665640564039457584007913129639934 [1.157e77], 15708559942556327919058285537 [1.57e28]]

@@ -394,11 +394,9 @@ contract DN404Test is SoladyTest {
         dn.initializeDN404(_bound(_random(), 0, 16) * _WAD, addresses[2], address(mirror));
 
         do {
-            if (_random() % 2 == 0) {
-                _testMixed(addresses);
-            } else {
-                _testMixed2(addresses);
-            }
+            if (_random() % 2 == 0) _testMixed(addresses);
+            if (_random() % 2 == 0) _testMixed2(addresses);
+            if (_random() % 2 == 0) _testMixed3(addresses);
         } while (_random() % 4 == 0);
 
         _maybeCheckInvariants(addresses);
@@ -520,6 +518,50 @@ contract DN404Test is SoladyTest {
             if (_random() % 2 == 0) dn.setAddToBurnedPool(_random() % 2 == 0);
 
             if (_random() % 4 == 0) _doRandomTransfer(addresses);
+
+            _maybeCheckInvariants(addresses);
+        } while (_random() % 4 == 0);
+    }
+
+    function _testMixed3(address[] memory addresses) internal {
+        do {
+            dn.setAddToBurnedPool(_random() % 2 == 0);
+
+            if (_random() % 4 == 0) dn.setUseDirectTransfersIfPossible(_random() % 2 == 0);
+
+            if (_random() % 2 == 0) _doRandomTransfer(addresses);
+
+            _maybeCheckInvariants(addresses);
+
+            if (_random() % 4 == 0) dn.setUseDirectTransfersIfPossible(_random() % 2 == 0);
+
+            if (_random() % 2 == 0) {
+                address to = addresses[_random() % addresses.length];
+                uint256 amount = _bound(_random(), 0, 16 * _WAD);
+                if (_random() % 2 == 0) {
+                    dn.mint(to, amount);
+                } else {
+                    dn.mintNext(to, amount);
+                }
+                _maybeCheckInvariants(addresses);
+            }
+
+            if (_random() % 8 == 0) {
+                address to = addresses[_random() % addresses.length];
+                uint256 amount = _bound(_random(), 0, 8 * _WAD);
+                _maybeCheckInvariants(addresses);
+                dn.mintNext(to, amount);
+                _maybeCheckInvariants(addresses);
+            }
+
+            if (_random() % 4 == 0) {
+                vm.prank(addresses[_random() % addresses.length]);
+                dn.setSkipNFT(_random() & 1 == 0);
+            }
+
+            if (_random() % 2 == 0) dn.setAddToBurnedPool(_random() % 2 == 0);
+
+            _doRandomTransfer(addresses);
 
             _maybeCheckInvariants(addresses);
         } while (_random() % 4 == 0);

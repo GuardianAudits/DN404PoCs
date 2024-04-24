@@ -297,19 +297,21 @@ contract DN404Handler is SoladyTest {
         assertEq(approvedSpenderDN, spender, "spender != approved spender DN");
     }
 
-    function setApprovalForAll(uint256 ownerIndexSeed, uint256 spenderIndexSeed, uint256 id)
+    function setApprovalForAll(uint256 ownerIndexSeed, uint256 spenderIndexSeed, uint256 id, bool approval)
         external
     {
+        // PRE-CONDITIONS
         address owner = randomAddress(ownerIndexSeed);
         address spender = randomAddress(spenderIndexSeed);
 
-        if (mirror.ownerAt(id) == address(0)) return;
-        if (mirror.ownerAt(id) != owner) {
-            owner = mirror.ownerAt(id);
-        }
-
+        // ACTION
         vm.startPrank(owner);
-        mirror.approve(spender, id);
+        mirror.setApprovalForAll(spender, approval);
+
+        // POST-CONDITIONS
+        bool approvedForAll = mirror.isApprovedForAll(owner, spender);
+        assertEq(approvedForAll, approval, "approved for all != approval");
+
     }
 
     function transferFromNFT(

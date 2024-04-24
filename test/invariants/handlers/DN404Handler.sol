@@ -264,21 +264,37 @@ contract DN404Handler is SoladyTest {
     }
 
     function setSkipNFT(uint256 actorIndexSeed, bool status) external {
-        vm.startPrank(randomAddress(actorIndexSeed));
+        // PRE-CONDITIONS
+        address actor = randomAddress(actorIndexSeed);
+
+        // ACTION
+        vm.startPrank(actor);
         dn404.setSkipNFT(status);
+
+        // POST-CONDITIONS
+        bool isSkipNFT = dn404.getSkipNFT(actor);
+        assertEq(isSkipNFT, status, "isSKipNFT != status");
     }
 
     function approveNFT(uint256 ownerIndexSeed, uint256 spenderIndexSeed, uint256 id) external {
+        // PRE-CONDITIONS
         address owner = randomAddress(ownerIndexSeed);
         address spender = randomAddress(spenderIndexSeed);
 
-        if (mirror.ownerAt(id) != address(0)) return;
+        if (mirror.ownerAt(id) == address(0)) return;
         if (mirror.ownerAt(id) != owner) {
             owner = mirror.ownerAt(id);
         }
 
+        // ACTION
         vm.startPrank(owner);
         mirror.approve(spender, id);
+
+        // POST-CONDITIONS
+        address approvedSpenderMirror = mirror.getApproved(id);
+        address approvedSpenderDN = dn404.getApproved(id);
+        assertEq(approvedSpenderMirror, spender, "spender != approved spender mirror");
+        assertEq(approvedSpenderDN, spender, "spender != approved spender DN");
     }
 
     function setApprovalForAll(uint256 ownerIndexSeed, uint256 spenderIndexSeed, uint256 id)
@@ -287,7 +303,7 @@ contract DN404Handler is SoladyTest {
         address owner = randomAddress(ownerIndexSeed);
         address spender = randomAddress(spenderIndexSeed);
 
-        if (mirror.ownerAt(id) != address(0)) return;
+        if (mirror.ownerAt(id) == address(0)) return;
         if (mirror.ownerAt(id) != owner) {
             owner = mirror.ownerAt(id);
         }

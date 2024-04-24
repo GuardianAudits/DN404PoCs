@@ -125,6 +125,7 @@ contract DN404Handler is SoladyTest {
         uint256 toIndexSeed,
         uint256 amount
     ) external {
+        // PRE-CONDITIONS
         address sender = randomAddress(senderIndexSeed);
         address from = randomAddress(fromIndexSeed);
         address to = randomAddress(toIndexSeed);
@@ -133,14 +134,17 @@ contract DN404Handler is SoladyTest {
 
         uint256 fromBalanceBefore = dn404.balanceOf(from);
         uint256 toBalanceBefore = dn404.balanceOf(to);
+        uint256 totalSupplyBefore = dn404.totalSupply();
 
         if (dn404.allowance(from, sender) < amount) {
             sender = from;
             vm.startPrank(sender);
         }
 
+        // ACTION
         dn404.transferFrom(from, to, amount);
 
+        // POST-CONDITIONS
         uint256 fromNFTPreOwned = nftsOwned[from];
 
         nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromBalanceBefore - amount) / _WAD);
@@ -148,6 +152,22 @@ contract DN404Handler is SoladyTest {
             if (from == to) toBalanceBefore -= amount;
             nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / _WAD, nftsOwned[to]);
         }
+
+        uint256 fromBalanceAfter = dn404.balanceOf(from);
+        uint256 toBalanceAfter = dn404.balanceOf(to);
+        uint256 totalSupplyAfter = dn404.totalSupply();
+
+        // Assert balance updates between addresses are valid.
+        if (from != to) {
+            assertEq(fromBalanceAfter + amount, fromBalanceBefore, "balance after + amount != balance before");
+            assertEq(toBalanceAfter, toBalanceBefore + amount, "balance After != balance Before + amount");
+        }
+        else {
+            assertEq(fromBalanceAfter, fromBalanceBefore, "balance after != balance before");
+        }
+        
+        // Assert totalSupply stays the same.
+        assertEq(totalSupplyBefore, totalSupplyAfter, "total supply before != total supply after");
     }
 
     function mint(uint256 toIndexSeed, uint256 amount) external {

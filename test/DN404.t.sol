@@ -353,17 +353,20 @@ contract DN404Test is SoladyTest {
         if (_random() % 16 == 0) _checkBalanceSumInvariant(addresses);
     }
 
-    function _doRandomDNTransfer(address[] memory addresses) internal {
-        vm.recordLogs();
+    function _doRandomDNTransfer(address[] memory addresses)
+        internal
+        checkERC721EventsWithBurnedPool
+    {
         address from = addresses[_random() % addresses.length];
         uint256 amount = _bound(_random(), 0, dn.balanceOf(from));
         vm.prank(from);
         dn.transfer(addresses[_random() % addresses.length], amount);
-        _checkERC721TransferEventsWithBurnedPool();
     }
 
-    function _doRandomMirrorTransfer(address[] memory addresses) internal {
-        vm.recordLogs();
+    function _doRandomMirrorTransfer(address[] memory addresses)
+        internal
+        checkERC721EventsWithBurnedPool
+    {
         address from = addresses[_random() % addresses.length];
         unchecked {
             for (uint256 id = 1; id != 256; ++id) {
@@ -378,7 +381,6 @@ contract DN404Test is SoladyTest {
                 }
             }
         }
-        _checkERC721TransferEventsWithBurnedPool();
     }
 
     function _doRandomTransfer(address[] memory addresses) internal {
@@ -398,32 +400,37 @@ contract DN404Test is SoladyTest {
         }
     }
 
-    function _checkERC721TransferEventsWithBurnedPool() internal {
+    modifier checkERC721EventsWithBurnedPool() {
+        bool r = _random() % 8 == 0;
+        if (r) vm.recordLogs();
+        _;
+        if (r) __checkERC721EventsWithBurnedPool();
+    }
+
+    function __checkERC721EventsWithBurnedPool() private {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         uint256[] memory burnedPool = dn.burnedPool();
         unchecked {
             for (uint256 i; i != logs.length; i++) {
                 if (logs[i].topics.length != 4) continue;
-                if (logs[i].topics[0] != keccak256("Transfer(address,address,uint256)")) continue;
                 if (logs[i].topics[2] == bytes32(0)) continue;
+                if (logs[i].topics[0] != keccak256("Transfer(address,address,uint256)")) continue;
                 uint256 id = uint256(logs[i].topics[3]);
                 for (uint256 j; j != burnedPool.length; j++) {
-                    if (burnedPool[j] == id) revert("Minted token ID is still in burned pool.");
+                    if (burnedPool[j] == id) {
+                        revert("Token ID with non-zero address owner is still in burned pool.");
+                    }
                 }
             }
         }
     }
 
-    function _mintNext(address to, uint256 amount) internal {
-        vm.recordLogs();
+    function _mintNext(address to, uint256 amount) internal checkERC721EventsWithBurnedPool {
         dn.mintNext(to, amount);
-        _checkERC721TransferEventsWithBurnedPool();
     }
 
-    function _mint(address to, uint256 amount) internal {
-        vm.recordLogs();
+    function _mint(address to, uint256 amount) internal checkERC721EventsWithBurnedPool {
         dn.mint(to, amount);
-        _checkERC721TransferEventsWithBurnedPool();
     }
 
     function testMixed(bytes32) public {

@@ -493,7 +493,7 @@ abstract contract DN404 {
     /// @dev Mints `amount` tokens to `to`, increasing the total supply.
     /// This variant mints NFT tokens starting from ID `preTotalSupply / _unit() + 1`.
     /// The `nextTokenId` will not be changed.
-    /// The burn pool will be invalidated (emptied) if any NFTs are minted.
+    /// If any NFTs are minted, the burn pool will be invalidated (emptied).
     ///
     /// Will mint NFTs to `to` if the recipient's new balance supports
     /// additional NFTs ***AND*** the `to` address's skipNFT flag is set to false.
@@ -512,11 +512,11 @@ abstract contract DN404 {
             toAddressData.balance = uint96(toBalance);
             t.toEnd = toBalance / _unit();
         }
-        uint256 startId;
+        uint256 id;
         uint256 maxId;
         unchecked {
             uint256 preTotalSupply = uint256($.totalSupply);
-            startId = preTotalSupply / _unit() + 1;
+            id = preTotalSupply / _unit() + 1;
             uint256 totalSupply_ = uint256(preTotalSupply) + amount;
             $.totalSupply = uint96(totalSupply_);
             uint256 overflows = _toUint(_totalSupplyOverflows(totalSupply_));
@@ -540,18 +540,17 @@ abstract contract DN404 {
                     t.toAlias = _registerAndResolveAlias(toAddressData, to);
                     // Mint loop.
                     do {
-                        uint256 id = startId;
                         while (_get(oo, _ownershipIndex(id)) != 0) {
                             id = _useExistsLookup()
                                 ? _wrapNFTId(_findFirstUnset($.exists, id + 1, maxId), maxId)
                                 : _wrapNFTId(id + 1, maxId);
                         }
-                        startId = _wrapNFTId(id + 1, maxId);
                         if (_useExistsLookup()) _set($.exists, id, true);
                         _set(toOwned, toIndex, uint32(id));
                         _setOwnerAliasAndOwnedIndex(oo, id, t.toAlias, uint32(toIndex++));
                         _packedLogsAppend(packedLogs, id);
                         _afterNFTTransfer(address(0), to, id);
+                        id = _wrapNFTId(id + 1, maxId);
                     } while (toIndex != t.toEnd);
 
                     _packedLogsSend(packedLogs, $.mirrorERC721);

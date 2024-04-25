@@ -493,7 +493,7 @@ abstract contract DN404 {
     /// @dev Mints `amount` tokens to `to`, increasing the total supply.
     /// This variant mints NFT tokens starting from ID `preTotalSupply / _unit() + 1`.
     /// The `nextTokenId` will not be changed.
-    /// If any NFTs are minted, the burn pool will be invalidated (emptied).
+    /// If any NFTs are minted, the burned pool will be invalidated (emptied).
     ///
     /// Will mint NFTs to `to` if the recipient's new balance supports
     /// additional NFTs ***AND*** the `to` address's skipNFT flag is set to false.
@@ -531,7 +531,7 @@ abstract contract DN404 {
                 _DNPackedLogs memory packedLogs = _packedLogsMalloc(_zeroFloorSub(t.toEnd, toIndex));
 
                 if (packedLogs.logs.length != 0) {
-                    // Invalidate (empty) the burn pool.
+                    // Invalidate (empty) the burned pool.
                     $.burnedPoolHead = 0;
                     $.burnedPoolTail = 0;
                     _packedLogsSet(packedLogs, to, 0);

@@ -303,6 +303,7 @@ contract DN404Handler is SoladyTest {
         uint256 fromBalanceBefore = dn404.balanceOf(from);
         uint256 totalSupplyBefore = dn404.totalSupply();
         uint256 fromNFTBalanceBefore = mirror.balanceOf(from);
+        uint256 totalNFTSupplyBefore = mirror.totalSupply();
 
         // ACTION
         dn404.burn(from, amount);
@@ -314,12 +315,15 @@ contract DN404Handler is SoladyTest {
         uint256[] memory tokensAfter = dn404.tokensOf(from);
         uint256 totalSupplyAfter = dn404.totalSupply();
         uint256 fromNFTBalanceAfter = mirror.balanceOf(from);
+        uint256 totalNFTSupplyAfter = mirror.totalSupply();
         // Assert user tokensOf was reduced by numToBurn.
         assertEq(tokensAfter.length, nftsOwned[from], "owned != len(tokensOf)");
         // Assert totalSupply decreased by burned amount.
         assertEq(totalSupplyBefore, totalSupplyAfter + amount, "supply before != supply after + amount");
         // Assert NFT balance decreased by numToBurn.
         assertEq(fromNFTBalanceBefore, fromNFTBalanceAfter + numToBurn, "NFT balance did not decrease appropriately");
+        // Assert totalNFTSupply is at most equal to prior state before mint.
+        assertLe(totalNFTSupplyAfter, totalNFTSupplyBefore, "nft supply after > nft supply before");
     }
 
     function setSkipNFT(uint256 actorIndexSeed, bool status) public {
@@ -399,6 +403,7 @@ contract DN404Handler is SoladyTest {
 
         uint256 fromBalanceBefore = dn404.balanceOf(from);
         uint256 toBalanceBefore = dn404.balanceOf(to);
+        uint256 totalNFTSupplyBefore = mirror.totalSupply();
 
         // ACTION
         vm.startPrank(sender);
@@ -412,6 +417,7 @@ contract DN404Handler is SoladyTest {
         uint256[] memory tokensToAfter = dn404.tokensOf(to);
         uint256 fromBalanceAfter = dn404.balanceOf(from);
         uint256 toBalanceAfter = dn404.balanceOf(to);
+        uint256 totalNFTSupplyAfter = mirror.totalSupply();
 
         // Assert length matches internal tracking.
         assertEq(tokensFromAfter.length, nftsOwned[from], "Owned != len(tokensOfFrom)");
@@ -425,8 +431,10 @@ contract DN404Handler is SoladyTest {
             assertEq(fromBalanceBefore, fromBalanceAfter, "before != after");
             assertEq(toBalanceAfter, toBalanceBefore, "after != before");
         }
-        // Assert `to` address owns the transferred NFT
+        // Assert `to` address owns the transferred NFT.
         assertEq(mirror.ownerAt(id), to, "to != ownerOf");
+        // Assert totalNFTSupply is unchanged.
+        assertEq(totalNFTSupplyBefore, totalNFTSupplyAfter, "total supply before != total supply after");
     }
 
     function _zeroFloorSub(uint256 x, uint256 y) private pure returns (uint256 z) {

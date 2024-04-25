@@ -12,7 +12,7 @@ contract MockDN404 is DN404 {
 
     bool addToBurnedPool;
 
-    bool useDirectTransfersIfPossible;
+    bool public useDirectTransfersIfPossible;
 
     bool givePermit2DefaultInfiniteAllowance;
 
@@ -103,8 +103,8 @@ contract MockDN404 is DN404 {
             uint256 id = _get($.owned[owner], i);
             result[i] = id;
             // Check invariants.
-            require(_ownerAt(id) == owner);
-            require(_get($.oo, _ownedIndex(id)) == i);
+            require(_ownerAt(id) == owner, "ownerAt != owner");
+            require(_get($.oo, _ownedIndex(id)) == i, "ownedIndex != i");
         }
     }
 

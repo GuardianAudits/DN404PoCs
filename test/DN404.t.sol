@@ -296,11 +296,12 @@ contract DN404Test is SoladyTest {
         unchecked {
             uint256[] memory allTokenIds;
             for (uint256 i; i != addresses.length; ++i) {
-                uint256[] memory tokens = dn.tokensOf(addresses[i]);
+                address a = addresses[i];
+                uint256[] memory tokens = dn.tokensOf(a);
                 // Might not be sorted.
                 LibSort.sort(tokens);
                 allTokenIds = LibSort.union(allTokenIds, tokens);
-                assertLe(tokens.length, dn.balanceOf(addresses[i]) / _WAD);
+                assertLe(tokens.length, dn.balanceOf(a) / _WAD);
             }
             assertEq(allTokenIds.length, mirror.totalSupply());
             uint256[] memory burnedPool = dn.burnedPool();
@@ -309,44 +310,47 @@ contract DN404Test is SoladyTest {
         }
     }
 
-    function _checkBalanceSumInvariant(address[] memory addresses) internal {
+    struct _BalanceSumInvariantTemps {
+        address a;
+        uint256 nftBalance;
         uint256 nftBalanceSum;
+        uint256 balance;
+        uint256 balanceSum;
+        uint256 tokenIdCeil;
+        uint256 numOwned;
+    }
+
+    function _checkBalanceSumInvariant(address[] memory addresses) internal {
+        _BalanceSumInvariantTemps memory t;
         unchecked {
-            uint256 balanceSum;
             for (uint256 i; i != addresses.length; ++i) {
-                address a = addresses[i];
-                uint256 balance = dn.balanceOf(a);
-                balanceSum += balance;
-                uint256 nftBalance = mirror.balanceOf(a);
-                assertLe(nftBalance, balance / _WAD);
-                nftBalanceSum += nftBalance;
-            }
-            assertEq(balanceSum, dn.totalSupply());
-            assertEq(nftBalanceSum, mirror.totalSupply());
-            assertLe(nftBalanceSum, balanceSum / _WAD);
-        }
-        unchecked {
-            uint256 n;
-            for (uint256 i; i != addresses.length; ++i) {
-                uint256[] memory tokens = dn.tokensOf(addresses[i]);
+                t.a = addresses[i];
+                t.balance = dn.balanceOf(t.a);
+                t.balanceSum += t.balance;
+                t.nftBalance = mirror.balanceOf(t.a);
+                assertLe(t.nftBalance, t.balance / _WAD);
+                t.nftBalanceSum += t.nftBalance;
+                uint256[] memory tokens = dn.tokensOf(t.a);
                 for (uint256 j; j != tokens.length; ++j) {
-                    n = n | tokens[j];
+                    t.tokenIdCeil |= tokens[j];
                 }
+                assertEq(tokens.length, t.nftBalance);
             }
-            uint256 numOwned;
-            for (uint256 i; i <= n; ++i) {
-                if (mirror.ownerAt(i) != address(0)) numOwned++;
+            assertEq(t.balanceSum, dn.totalSupply());
+            assertEq(t.nftBalanceSum, mirror.totalSupply());
+            assertLe(t.nftBalanceSum, t.balanceSum / _WAD);
+            for (uint256 i; i <= t.tokenIdCeil; ++i) {
+                if (mirror.ownerAt(i) != address(0)) t.numOwned++;
             }
-            assertEq(numOwned, nftBalanceSum);
+            assertEq(t.numOwned, t.nftBalanceSum);
             assertEq(mirror.ownerAt(0), address(0));
-            assertEq(mirror.ownerAt(n + 1), address(0));
+            assertEq(mirror.ownerAt(t.tokenIdCeil + 1), address(0));
         }
     }
 
     function _maybeCheckInvariants(address[] memory addresses) internal {
-        uint256 r = _random();
-        if ((r >> 0) & 15 == 0) _checkBurnPoolInvariant(addresses);
-        if ((r >> 8) & 15 == 0) _checkBalanceSumInvariant(addresses);
+        if (_random() % 16 == 0) _checkBurnPoolInvariant(addresses);
+        if (_random() % 16 == 0) _checkBalanceSumInvariant(addresses);
     }
 
     function _doRandomDNTransfer(address[] memory addresses) internal {
@@ -468,6 +472,7 @@ contract DN404Test is SoladyTest {
                 dn.burn(from, amount);
                 _maybeCheckInvariants(addresses);
                 if (_random() % 2 == 0) amount = _bound(_random(), 0, 16 * _WAD);
+                _randomizeConfigurations(addresses);
                 if (_random() % 2 == 0) {
                     dn.mint(to, amount);
                 } else {
@@ -479,23 +484,18 @@ contract DN404Test is SoladyTest {
             if (_random() % 8 == 0) {
                 address to = addresses[_random() % addresses.length];
                 uint256 amount = _bound(_random(), 0, 8 * _WAD);
-                if (_random() % 2 == 0) {
-                    dn.burn(to, _bound(_random(), 0, dn.balanceOf(to)));
-                    _maybeCheckInvariants(addresses);
-                }
+                if (_random() % 2 == 0) dn.burn(to, _bound(_random(), 0, dn.balanceOf(to)));
+                _maybeCheckInvariants(addresses);
                 if (_random() % 2 == 0) {
                     dn.mintNext(to, amount);
                     _maybeCheckInvariants(addresses);
                     dn.burn(to, amount);
-                    _maybeCheckInvariants(addresses);
                 } else {
                     dn.mintNext(to, amount);
-                    _maybeCheckInvariants(addresses);
                 }
-                if (_random() % 2 == 0) {
-                    dn.burn(to, _bound(_random(), 0, dn.balanceOf(to)));
-                    _maybeCheckInvariants(addresses);
-                }
+                _maybeCheckInvariants(addresses);
+                if (_random() % 2 == 0) dn.burn(to, _bound(_random(), 0, dn.balanceOf(to)));
+                _maybeCheckInvariants(addresses);
             }
             _randomizeConfigurations(addresses);
             if (_random() % 4 == 0) _doRandomTransfer(addresses);

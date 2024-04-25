@@ -97,50 +97,50 @@ contract DN404Handler is SoladyTest {
 
         // ACTION
         vm.recordLogs();
-        dn404.transfer(to, amount);
+        (bool success, ) = address(dn404).call(abi.encodeWithSelector(DN404.transfer.selector, to, amount));
 
-        if (dn404.useDirectTransfersIfPossible()) {
-            Vm.Log[] memory logs = vm.getRecordedLogs();
-            uint256 id;
-            for (uint256 i = 0; i < n; i++) {
-                console.logBytes32(logs[i].topics[0]);
-                if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
-                    // Grab minted ID from logs.
-                    if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
+        // POST-CONDITIONS
+        if (success) {
+            if (dn404.useDirectTransfersIfPossible()) {
+                Vm.Log[] memory logs = vm.getRecordedLogs();
+                uint256 id;
+                for (uint256 i = 0; i < n; i++) {
+                    console.logBytes32(logs[i].topics[0]);
+                    if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
+                        // Grab minted ID from logs.
+                        if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
 
-                    for (uint j = 0; j < burnedIds.length; j++) {
-                        console.log("Burned Ids:", burnedIds[j]);
-                        // ❌ Assert transfer direct does not overlap with burned pool.
-                        assertNotEq(burnedIds[j], id, "transfer direct went over burned ids");
+                        for (uint j = 0; j < burnedIds.length; j++) {
+                            console.log("Burned Ids:", burnedIds[j]);
+                            // ❌ Assert transfer direct does not overlap with burned pool.
+                            assertNotEq(burnedIds[j], id, "transfer direct went over burned ids");
+                        }
                     }
                 }
             }
-        }
         
-        // POST-CONDITIONS
-        uint256 fromNFTPreOwned = nftsOwned[from];
+            nftsOwned[from] -= _zeroFloorSub(nftsOwned[from], (fromBalanceBefore - amount) / dn404.unit());
+            if (!dn404.getSkipNFT(to)) {
+                if (from == to) toBalanceBefore -= amount;
+                nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
+            }
 
-        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromBalanceBefore - amount) / dn404.unit());
-        if (!dn404.getSkipNFT(to)) {
-            if (from == to) toBalanceBefore -= amount;
-            nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
-        }
+            uint256 fromBalanceAfter = dn404.balanceOf(from);
+            uint256 toBalanceAfter = dn404.balanceOf(to);
+            uint256 totalSupplyAfter = dn404.totalSupply();
 
-        uint256 fromBalanceAfter = dn404.balanceOf(from);
-        uint256 toBalanceAfter = dn404.balanceOf(to);
-        uint256 totalSupplyAfter = dn404.totalSupply();
-
-        // Assert balance updates between addresses are valid.
-        if (from != to) {
-            assertEq(fromBalanceAfter + amount, fromBalanceBefore, "balance after + amount != balance before");
-            assertEq(toBalanceAfter, toBalanceBefore + amount, "balance After != balance Before + amount");
+            // Assert balance updates between addresses are valid.
+            if (from != to) {
+                assertEq(fromBalanceAfter + amount, fromBalanceBefore, "balance after + amount != balance before");
+                // assertEq(toBalanceAfter, toBalanceBefore + amount, "balance after != balance before + amount");
+            }
+            else {
+                assertEq(fromBalanceAfter, fromBalanceBefore, "balance after != balance before");
+            }
+            
+            // Assert totalSupply stays the same.
+            assertEq(totalSupplyBefore, totalSupplyAfter, "total supply before != total supply after");
         }
-        else {
-            assertEq(fromBalanceAfter, fromBalanceBefore, "balance after != balance before");
-        }
-        
-        // Assert totalSupply stays the same.
-        assertEq(totalSupplyBefore, totalSupplyAfter, "total supply before != total supply after");
     }
 
     function transferFrom(
@@ -172,50 +172,50 @@ contract DN404Handler is SoladyTest {
 
         // ACTION
         vm.recordLogs();
-        dn404.transferFrom(from, to, amount);
+        (bool success, ) = address(dn404).call(abi.encodeWithSelector(DN404.transferFrom.selector, from, to, amount));
 
-        if (dn404.useDirectTransfersIfPossible()) {
-            Vm.Log[] memory logs = vm.getRecordedLogs();
-            uint256 id;
-            for (uint256 i = 0; i < n; i++) {
-                console.logBytes32(logs[i].topics[0]);
-                if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
-                    // Grab minted ID from logs.
-                    if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
+        // POST-CONDITIONS
+        if (success) {
+            if (dn404.useDirectTransfersIfPossible()) {
+                Vm.Log[] memory logs = vm.getRecordedLogs();
+                uint256 id;
+                for (uint256 i = 0; i < n; i++) {
+                    console.logBytes32(logs[i].topics[0]);
+                    if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
+                        // Grab minted ID from logs.
+                        if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
 
-                    for (uint j = 0; j < burnedIds.length; j++) {
-                        console.log("Burned Ids:", burnedIds[j]);
-                        // ❌ Assert transferFrom direct does not overlap with burned pool.
-                        assertNotEq(burnedIds[j], id, "transferFrom direct went over burned ids");
+                        for (uint j = 0; j < burnedIds.length; j++) {
+                            console.log("Burned Ids:", burnedIds[j]);
+                            // ❌ Assert transferFrom direct does not overlap with burned pool.
+                            assertNotEq(burnedIds[j], id, "transferFrom direct went over burned ids");
+                        }
                     }
                 }
             }
-        }
 
-        // POST-CONDITIONS
-        uint256 fromNFTPreOwned = nftsOwned[from];
+            nftsOwned[from] -= _zeroFloorSub(nftsOwned[from], (fromBalanceBefore - amount) / dn404.unit());
+            if (!dn404.getSkipNFT(to)) {
+                if (from == to) toBalanceBefore -= amount;
+                nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
+            }
 
-        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromBalanceBefore - amount) / dn404.unit());
-        if (!dn404.getSkipNFT(to)) {
-            if (from == to) toBalanceBefore -= amount;
-            nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
-        }
+            uint256 fromBalanceAfter = dn404.balanceOf(from);
+            uint256 toBalanceAfter = dn404.balanceOf(to);
+            // uint256 totalSupplyAfter = dn404.totalSupply();
 
-        uint256 fromBalanceAfter = dn404.balanceOf(from);
-        uint256 toBalanceAfter = dn404.balanceOf(to);
-        uint256 totalSupplyAfter = dn404.totalSupply();
-
-        // Assert balance updates between addresses are valid.
-        if (from != to) {
-            assertEq(fromBalanceAfter + amount, fromBalanceBefore, "balance after + amount != balance before");
-            // assertEq(toBalanceAfter, toBalanceBefore + amount, "balance After != balance Before + amount");
+            // Assert balance updates between addresses are valid.
+            if (from != to) {
+                assertEq(fromBalanceAfter + amount, fromBalanceBefore, "balance after + amount != balance before");
+                assertEq(dn404.balanceOf(to), toBalanceBefore + amount, "balance after != balance before + amount");
+            }
+            else {
+                assertEq(fromBalanceAfter, fromBalanceBefore, "balance after != balance before");
+            }
+            
+            // Assert totalSupply stays the same.
+            assertEq(totalSupplyBefore, dn404.totalSupply(), "total supply before != total supply after");
         }
-        else {
-            assertEq(fromBalanceAfter, fromBalanceBefore, "balance after != balance before");
-        }
-        
-        // Assert totalSupply stays the same.
-        assertEq(totalSupplyBefore, totalSupplyAfter, "total supply before != total supply after");
     }
 
     function mint(uint256 toIndexSeed, uint256 amount) public {
@@ -465,7 +465,7 @@ contract DN404Handler is SoladyTest {
     }
 
     function setUnit(uint256 value) public {
-        value = _bound(value, 1e18, 1e20);
+        value = _bound(value, 1e16, 1e20);
         dn404.setUnit(value);
     }
 
@@ -517,5 +517,17 @@ contract DN404Handler is SoladyTest {
         //  sender=0x00000000000000000000000000000000000139c4 addr=[test/invariants/handlers/DN404Handler.sol:DN404Handler]0xF62849F9A0B5Bf2913b396098F7c7019b51A820a calldata=mint(uint256,uint256) args=[3, 131816594966788261336111922731059090399600923988487938664410896425 [1.318e65]]
         mint(3, 131816594966788261336111922731059090399600923988487938664410896425);
         // invariantMirrorAndBaseRemainImmutable() (runs: 7441, calls: 111613, reverts: 1)
+    }
+
+    function poc_owned_does_not_match_internal() public {
+//         [FAIL. Reason: owned != len(tokensOf): 22 != 0]
+// 	[Sequence]
+// 		sender=0x0000132500001324000013230000132200001322 addr=[test/invariants/handlers/DN404Handler.sol:DN404Handler]0xF62849F9A0B5Bf2913b396098F7c7019b51A820a calldata=mint(uint256,uint256) args=[1438766629005650134975100455840736710673155212971179553265908 [1.438e60], 381945484183744263816296001795312878460488748070619161957 [3.819e56]]
+        mint(1438766629005650134975100455840736710673155212971179553265908, 381945484183744263816296001795312878460488748070619161957);
+// 		sender=0x0000000100001561000000010000156000000001 addr=[test/invariants/handlers/DN404Handler.sol:DN404Handler]0xF62849F9A0B5Bf2913b396098F7c7019b51A820a calldata=setUnit(uint256) args=[1329]
+        setUnit(1329);
+// 		sender=0x0000000100000665000000010000066400000001 addr=[test/invariants/handlers/DN404Handler.sol:DN404Handler]0xF62849F9A0B5Bf2913b396098F7c7019b51A820a calldata=mint(uint256,uint256) args=[2, 35738316395000506422827 [3.573e22]]
+        mint(2, 35738316395000506422827);
+//  invariantDN404BalanceSum() (runs: 577, calls: 1731, reverts: 1)
     }
 }

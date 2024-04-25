@@ -183,12 +183,12 @@ contract MockDN404 is DN404 {
             DN404Storage storage $ = _getDN404Storage();
             uint32 start = $.burnedPoolHead;
             uint32 end = $.burnedPoolTail;
-            result = new uint256[](end - start);
+            result = new uint256[](end > start ? end - start : start - end);
             uint256 i;
             while (start != end) {
                 result[i] = _get($.burnedPool, start);
-                start++;
-                i++;
+                ++start;
+                ++i;
             }
         }
     }

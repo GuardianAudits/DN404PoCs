@@ -248,19 +248,24 @@ contract DN404Handler is SoladyTest {
 
         uint256 fromBalanceBefore = dn404.balanceOf(from);
         uint256 totalSupplyBefore = dn404.totalSupply();
+        uint256 fromNFTBalanceBefore = mirror.balanceOf(from);
 
         // ACTION
         dn404.burn(from, amount);
 
         // POST-CONDITIONS
-        nftsOwned[from] -= _zeroFloorSub(nftsOwned[from], (fromBalanceBefore - amount) / _WAD);
+        uint256 numToBurn = _zeroFloorSub(nftsOwned[from], (fromBalanceBefore - amount) / _WAD);
+        nftsOwned[from] -= numToBurn;
 
         uint256[] memory tokensAfter = dn404.tokensOf(from);
         uint256 totalSupplyAfter = dn404.totalSupply();
-        // Assert user balance decreased by burned amount.
+        uint256 fromNFTBalanceAfter = mirror.balanceOf(from);
+        // Assert user tokensOf was reduced by numToBurn.
         assertEq(tokensAfter.length, nftsOwned[from], "owned != len(tokensOf)");
         // Assert totalSupply decreased by burned amount.
         assertEq(totalSupplyBefore, totalSupplyAfter + amount, "supply before != supply after + amount");
+        // Assert NFT balance decreased by numToBurn.
+        assertEq(fromNFTBalanceBefore, fromNFTBalanceAfter + numToBurn, "NFT balance did not decrease appropriately");
     }
 
     function setSkipNFT(uint256 actorIndexSeed, bool status) public {
@@ -293,8 +298,12 @@ contract DN404Handler is SoladyTest {
         // POST-CONDITIONS
         address approvedSpenderMirror = mirror.getApproved(id);
         address approvedSpenderDN = dn404.getApproved(id);
+        address ownerAfter = mirror.ownerAt(id);
+        // Assert approved spender is requested spender.
         assertEq(approvedSpenderMirror, spender, "spender != approved spender mirror");
         assertEq(approvedSpenderDN, spender, "spender != approved spender DN");
+        // Assert that owner of ID did not change.
+        assertEq(owner, ownerAfter, "owner changed on approval");
     }
 
     function setApprovalForAll(uint256 ownerIndexSeed, uint256 spenderIndexSeed, uint256 id, bool approval)

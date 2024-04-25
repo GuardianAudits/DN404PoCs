@@ -354,14 +354,16 @@ contract DN404Test is SoladyTest {
     }
 
     function _doRandomDNTransfer(address[] memory addresses) internal {
+        vm.recordLogs();
         address from = addresses[_random() % addresses.length];
-        address to = addresses[_random() % addresses.length];
         uint256 amount = _bound(_random(), 0, dn.balanceOf(from));
         vm.prank(from);
-        dn.transfer(to, amount);
+        dn.transfer(addresses[_random() % addresses.length], amount);
+        _checkERC721TransferEventsWithBurnedPool();
     }
 
     function _doRandomMirrorTransfer(address[] memory addresses) internal {
+        vm.recordLogs();
         address from = addresses[_random() % addresses.length];
         unchecked {
             for (uint256 id = 1; id != 256; ++id) {
@@ -370,13 +372,13 @@ contract DN404Test is SoladyTest {
                     if (_random() % 32 == 0) break;
                 }
                 if (owner == from && _random() % 2 == 0) {
-                    address to = addresses[_random() % addresses.length];
                     vm.prank(from);
-                    mirror.transferFrom(from, to, id);
+                    mirror.transferFrom(from, addresses[_random() % addresses.length], id);
                     break;
                 }
             }
         }
+        _checkERC721TransferEventsWithBurnedPool();
     }
 
     function _doRandomTransfer(address[] memory addresses) internal {
@@ -394,6 +396,34 @@ contract DN404Test is SoladyTest {
             vm.prank(addresses[_random() % addresses.length]);
             dn.setSkipNFT(_random() & 1 == 0);
         }
+    }
+
+    function _checkERC721TransferEventsWithBurnedPool() internal {
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        uint256[] memory burnedPool = dn.burnedPool();
+        unchecked {
+            for (uint256 i; i != logs.length; i++) {
+                if (logs[i].topics.length != 4) continue;
+                if (logs[i].topics[0] != keccak256("Transfer(address,address,uint256)")) continue;
+                if (logs[i].topics[2] == bytes32(0)) continue;
+                uint256 id = uint256(logs[i].topics[3]);
+                for (uint256 j; j != burnedPool.length; j++) {
+                    if (burnedPool[j] == id) revert("Minted token ID is still in burned pool.");
+                }
+            }
+        }
+    }
+
+    function _mintNext(address to, uint256 amount) internal {
+        vm.recordLogs();
+        dn.mintNext(to, amount);
+        _checkERC721TransferEventsWithBurnedPool();
+    }
+
+    function _mint(address to, uint256 amount) internal {
+        vm.recordLogs();
+        dn.mint(to, amount);
+        _checkERC721TransferEventsWithBurnedPool();
     }
 
     function testMixed(bytes32) public {
@@ -451,7 +481,7 @@ contract DN404Test is SoladyTest {
                 uint256 amount = _bound(_random(), 0, dn.balanceOf(from));
                 dn.burn(from, amount);
                 _maybeCheckInvariants(addresses);
-                dn.mint(to, amount);
+                _mint(to, amount);
             }
             _randomizeConfigurations(addresses);
             if (_random() % 4 == 0) _doRandomTransfer(addresses);
@@ -474,9 +504,9 @@ contract DN404Test is SoladyTest {
                 if (_random() % 2 == 0) amount = _bound(_random(), 0, 16 * _WAD);
                 _randomizeConfigurations(addresses);
                 if (_random() % 2 == 0) {
-                    dn.mint(to, amount);
+                    _mint(to, amount);
                 } else {
-                    dn.mintNext(to, amount);
+                    _mintNext(to, amount);
                 }
                 _maybeCheckInvariants(addresses);
             }
@@ -487,11 +517,11 @@ contract DN404Test is SoladyTest {
                 if (_random() % 2 == 0) dn.burn(to, _bound(_random(), 0, dn.balanceOf(to)));
                 _maybeCheckInvariants(addresses);
                 if (_random() % 2 == 0) {
-                    dn.mintNext(to, amount);
+                    _mintNext(to, amount);
                     _maybeCheckInvariants(addresses);
                     dn.burn(to, amount);
                 } else {
-                    dn.mintNext(to, amount);
+                    _mintNext(to, amount);
                 }
                 _maybeCheckInvariants(addresses);
                 if (_random() % 2 == 0) dn.burn(to, _bound(_random(), 0, dn.balanceOf(to)));
@@ -514,9 +544,9 @@ contract DN404Test is SoladyTest {
                 address to = addresses[_random() % addresses.length];
                 uint256 amount = _bound(_random(), 0, 16 * _WAD);
                 if (_random() % 2 == 0) {
-                    dn.mint(to, amount);
+                    _mint(to, amount);
                 } else {
-                    dn.mintNext(to, amount);
+                    _mintNext(to, amount);
                 }
                 _maybeCheckInvariants(addresses);
             }
@@ -525,7 +555,7 @@ contract DN404Test is SoladyTest {
                 address to = addresses[_random() % addresses.length];
                 uint256 amount = _bound(_random(), 0, 8 * _WAD);
                 _maybeCheckInvariants(addresses);
-                dn.mintNext(to, amount);
+                _mintNext(to, amount);
                 _maybeCheckInvariants(addresses);
             }
 

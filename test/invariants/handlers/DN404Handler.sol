@@ -120,10 +120,10 @@ contract DN404Handler is SoladyTest {
         // POST-CONDITIONS
         uint256 fromNFTPreOwned = nftsOwned[from];
 
-        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromBalanceBefore - amount) / _WAD);
+        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromBalanceBefore - amount) / dn404.unit());
         if (!dn404.getSkipNFT(to)) {
             if (from == to) toBalanceBefore -= amount;
-            nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / _WAD, nftsOwned[to]);
+            nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
         }
 
         uint256 fromBalanceAfter = dn404.balanceOf(from);
@@ -195,10 +195,10 @@ contract DN404Handler is SoladyTest {
         // POST-CONDITIONS
         uint256 fromNFTPreOwned = nftsOwned[from];
 
-        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromBalanceBefore - amount) / _WAD);
+        nftsOwned[from] -= _zeroFloorSub(fromNFTPreOwned, (fromBalanceBefore - amount) / dn404.unit());
         if (!dn404.getSkipNFT(to)) {
             if (from == to) toBalanceBefore -= amount;
-            nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / _WAD, nftsOwned[to]);
+            nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
         }
 
         uint256 fromBalanceAfter = dn404.balanceOf(from);
@@ -233,7 +233,7 @@ contract DN404Handler is SoladyTest {
         // POST-CONDITIONS
         if (success) {
             if (!dn404.getSkipNFT(to)) {
-                nftsOwned[to] = (toBalanceBefore + amount) / _WAD;
+                nftsOwned[to] = (toBalanceBefore + amount) / dn404.unit();
                 uint256[] memory tokensAfter = dn404.tokensOf(to);
                 assertEq(tokensAfter.length, nftsOwned[to], "owned != len(tokensOf)");
             }   
@@ -281,7 +281,7 @@ contract DN404Handler is SoladyTest {
         }
 
         if (!dn404.getSkipNFT(to)) {
-            nftsOwned[to] = (toBalanceBefore + amount) / _WAD;
+            nftsOwned[to] = (toBalanceBefore + amount) / dn404.unit();
             uint256[] memory tokensAfter = dn404.tokensOf(to);
             assertEq(tokensAfter.length, nftsOwned[to], "owned != len(tokensOf)");
         }
@@ -309,7 +309,7 @@ contract DN404Handler is SoladyTest {
         dn404.burn(from, amount);
 
         // POST-CONDITIONS
-        uint256 numToBurn = _zeroFloorSub(nftsOwned[from], (fromBalanceBefore - amount) / _WAD);
+        uint256 numToBurn = _zeroFloorSub(nftsOwned[from], (fromBalanceBefore - amount) / dn404.unit());
         nftsOwned[from] -= numToBurn;
 
         uint256[] memory tokensAfter = dn404.tokensOf(from);
@@ -465,7 +465,7 @@ contract DN404Handler is SoladyTest {
     }
 
     function setUnit(uint256 value) public {
-        value = _bound(value, 1e16, 1e20);
+        value = _bound(value, 1e18, 1e20);
         dn404.setUnit(value);
     }
 

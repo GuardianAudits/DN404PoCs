@@ -7,6 +7,7 @@ import {DN404} from "../../src/DN404.sol";
 import {DN404Mirror} from "../../src/DN404Mirror.sol";
 import {MockDN404CustomUnit} from "../utils/mocks/MockDN404CustomUnit.sol";
 import {DN404Handler} from "./handlers/DN404Handler.sol";
+import {BaseInvariantTest} from "./BaseInvariant.t.sol";
 
 // forgefmt: disable-start
 /**************************************************************************************************************************************/
@@ -23,36 +24,14 @@ import {DN404Handler} from "./handlers/DN404Handler.sol";
 /*** Vault Invariants                                                                                                               ***/
 /**************************************************************************************************************************************/
 // forgefmt: disable-end
-contract BaseInvariantTest is Test, StdInvariant {
-    address user0 = vm.addr(uint256(keccak256("User0")));
-    address user1 = vm.addr(uint256(keccak256("User1")));
-    address user2 = vm.addr(uint256(keccak256("User2")));
-    address user3 = vm.addr(uint256(keccak256("User3")));
-    address user4 = vm.addr(uint256(keccak256("User4")));
-    address user5 = vm.addr(uint256(keccak256("User5")));
-    address[] users = [user0, user1, user2, user3, user4, user5];
+contract VariableUnitInvariant is BaseInvariantTest {
 
-    uint256 internal constant _WAD = 1000000000000000000;
-
-    MockDN404CustomUnit dn404;
-    DN404Mirror dn404Mirror;
-    DN404Handler dn404Handler;
-
-    function setUp() public virtual {
-        dn404 = new MockDN404CustomUnit();
-        dn404.setUnit(10 ** 18);
-        dn404Mirror = new DN404Mirror(address(this));
-        dn404.initializeDN404(0, address(0), address(dn404Mirror));
-
-        dn404Handler = new DN404Handler(dn404);
-
-        vm.label(address(dn404), "dn404");
-        vm.label(address(dn404Mirror), "dn404Mirror");
-        vm.label(address(dn404Handler), "dn404Handler");
+    function setUp() public virtual override {
+        BaseInvariantTest.setUp();
 
         // Selectors to target.
-        // Currently excluding `mintNext` and `setUnit`.
-        bytes4[] memory selectors = new bytes4[](12);
+        // Currently excluding `mintNext`.
+        bytes4[] memory selectors = new bytes4[](13);
         selectors[0] = DN404Handler.approve.selector;
         selectors[1] = DN404Handler.transfer.selector;
         selectors[2] = DN404Handler.transferFrom.selector;
@@ -65,29 +44,9 @@ contract BaseInvariantTest is Test, StdInvariant {
         selectors[9] = DN404Handler.setUseExistsLookup.selector;
         selectors[10] = DN404Handler.setUseDirectTransfersIfPossible.selector;
         selectors[11] = DN404Handler.setAddToBurnedPool.selector;
+        selectors[12] = DN404Handler.setUnit.selector;
         targetSelector(FuzzSelector({addr: address(dn404Handler), selectors: selectors}));
-
-        // target handlers
-        targetContract(address(dn404Handler));
     }
 
-    function invariantMirror721BalanceSum() external {
-        uint256 total = dn404Handler.nftsOwned(user0) + dn404Handler.nftsOwned(user1)
-            + dn404Handler.nftsOwned(user2) + dn404Handler.nftsOwned(user3)
-            + dn404Handler.nftsOwned(user4) + dn404Handler.nftsOwned(user5);
-        assertEq(total, dn404Mirror.totalSupply(), "all users nfts owned exceed nft total supply");
-    }
-
-    function invariantDN404BalanceSum() external {
-        uint256 total = dn404.balanceOf(user0) + dn404.balanceOf(user1) + dn404.balanceOf(user2)
-            + dn404.balanceOf(user3) + dn404.balanceOf(user4) + dn404.balanceOf(user5);
-        assertEq(dn404.totalSupply(), total, "all users erc20 balance exceed erc20 total supply");
-    }
-
-    function invariantMirrorAndBaseRemainImmutable() external {
-        assertEq(
-            dn404.mirrorERC721(), address(dn404Mirror), "mirror 721 changed after initialization"
-        );
-        assertEq(dn404Mirror.baseERC20(), address(dn404), "base erc20 changed after initialization");
-    }
+    
 }

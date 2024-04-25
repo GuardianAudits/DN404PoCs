@@ -464,6 +464,11 @@ contract DN404Handler is SoladyTest {
         dn404.setAddToBurnedPool(value);
     }
 
+    function setUnit(uint256 value) public {
+        value = _bound(value, 1e16, 1e20);
+        dn404.setUnit(value);
+    }
+
     /*//////////////////////////////////////////////////////////////////////////
                                      POCS
     //////////////////////////////////////////////////////////////////////////*/

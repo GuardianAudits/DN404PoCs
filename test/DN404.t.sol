@@ -725,7 +725,7 @@ contract DN404Test is SoladyTest {
         }
     }
 
-    function testMintNextMixed(uint256) public {
+    function testMintNextContiguous(uint256) public {
         address[] memory addresses = new address[](3);
         addresses[0] = address(111);
         addresses[1] = address(222);
@@ -736,7 +736,9 @@ contract DN404Test is SoladyTest {
         dn.initializeDN404(totalMinted, address(this), address(mirror));
 
         do {
-            if (_random() % 2 == 0) dn.setAddToBurnedPool(_random() % 2 == 0);
+            if (_random() % 2 == 0) {
+                dn.setAddToBurnedPool(_random() % 2 == 0);
+            }
 
             do {
                 uint256 i = _random() % 2;
@@ -744,7 +746,7 @@ contract DN404Test is SoladyTest {
                 balances[i] += amount;
                 _mintNext(addresses[i], amount);
                 totalMinted += amount;
-            } while (_random() % 2 > 0);
+            } while (_random() % 2 != 0);
 
             for (uint256 i; i != 2; ++i) {
                 uint256 b = mirror.balanceOf(addresses[i]);
@@ -761,8 +763,8 @@ contract DN404Test is SoladyTest {
                 balances[i] += amount;
                 _mintNext(addresses[i], amount);
                 totalMinted += amount;
-            } while (_random() % 2 > 0);
-        } while (_random() % 2 > 0);
+            } while (_random() % 2 != 0);
+        } while (_random() % 2 != 0);
 
         _maybeCheckInvariants(addresses);
 

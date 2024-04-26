@@ -253,6 +253,8 @@ contract DN404Handler is SoladyTest {
             for (uint256 i = 0; i < logs.length; i++) {
                     if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
                         transferCounter += 1;
+                        assertEq(address(uint160(uint256(logs[i].topics[1]))), address(0), "from address does not match event");
+                        assertEq(address(uint160(uint256(logs[i].topics[2]))), to, "to address does not match event");
                     }
             }
         

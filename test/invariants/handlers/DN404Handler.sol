@@ -187,7 +187,7 @@ contract DN404Handler is SoladyTest {
 
                         for (uint j = 0; j < burnedIds.length; j++) {
                             console.log("Burned Ids:", burnedIds[j]);
-                            // ❌ Assert transferFrom direct does not overlap with burned pool.
+                            // Assert transferFrom direct does not overlap with burned pool.
                             assertNotEq(burnedIds[j], id, "transferFrom direct went over burned ids");
                         }
                     }
@@ -226,21 +226,35 @@ contract DN404Handler is SoladyTest {
         uint256 toBalanceBefore = dn404.balanceOf(to);
         uint256 totalSupplyBefore = dn404.totalSupply();
         uint256 totalNFTSupplyBefore = mirror.totalSupply();
+        uint256 toNFTBalanceBefore = dn404.balanceOfNFT(to);
 
         // ACTION
+        vm.recordLogs();
         (bool success, ) = address(dn404).call(abi.encodeWithSelector(MockDN404.mint.selector, to, amount)); // mint(to, amount);
 
         // POST-CONDITIONS
         if (success) {
+            uint256 toBalanceAfter = dn404.balanceOf(to);
+            uint256 totalSupplyAfter = dn404.totalSupply();
+            uint256 totalNFTSupplyAfter = mirror.totalSupply();
+
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            uint256 transferCounter;
+            for (uint256 i = 0; i < logs.length; i++) {
+                    if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
+                        transferCounter += 1;
+                    }
+            }
+        
             if (!dn404.getSkipNFT(to)) {
                 nftsOwned[to] = (toBalanceBefore + amount) / dn404.unit();
                 uint256[] memory tokensAfter = dn404.tokensOf(to);
                 assertEq(tokensAfter.length, nftsOwned[to], "owned != len(tokensOf)");
+                // Assert that number of (Transfer events - 1) should match the loop iterations to mint an NFT in `mint`.
+                // Subtract by 1 because one of the Transfer events is for the ERC20 transfer.
+                assertEq(transferCounter - 1, _zeroFloorSub((toBalanceAfter / dn404.unit()), toNFTBalanceBefore), "# of times transfer emitted != mint loop iterations");
             }   
 
-            uint256 toBalanceAfter = dn404.balanceOf(to);
-            uint256 totalSupplyAfter = dn404.totalSupply();
-            uint256 totalNFTSupplyAfter = mirror.totalSupply();
             // Assert user balance increased by minted amount.
             assertEq(toBalanceAfter, toBalanceBefore + amount, "balance after != balance before + amount");
             // Assert totalSupply increased by minted amount.

@@ -105,6 +105,7 @@ contract MockDN404 is DN404 {
             // Check invariants.
             require(_ownerAt(id) == owner, "ownerAt != owner");
             require(_get($.oo, _ownedIndex(id)) == i, "ownedIndex != i");
+            if (useExistsLookup) require(_get($.exists, id), "id not in exists bitmap");
         }
     }
 
@@ -190,6 +191,11 @@ contract MockDN404 is DN404 {
             id = _get($.burnedPool, head++);
             burnedIds[index++] = id;
         }
+    }
+
+    function burnedPoolHeadTail() public view returns (uint256, uint256) {
+        DN404Storage storage $ = _getDN404Storage();
+        return ($.burnedPoolHead, $.burnedPoolTail);
     }
 
     function balanceOfNFT(address owner) public view returns (uint256) {

@@ -435,6 +435,8 @@ contract DN404Handler is SoladyTest {
         assertEq(mirror.ownerAt(id), to, "to != ownerOf");
         // Assert totalNFTSupply is unchanged.
         assertEq(totalNFTSupplyBefore, totalNFTSupplyAfter, "total supply before != total supply after");
+        // Assert that approval is reset on transfer.
+        assertEq(mirror.getApproved(id), address(0));
     }
 
     function _zeroFloorSub(uint256 x, uint256 y) private pure returns (uint256 z) {

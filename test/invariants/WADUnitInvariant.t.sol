@@ -26,6 +26,26 @@ import {BaseInvariantTest} from "./BaseInvariant.t.sol";
 // forgefmt: disable-end
 contract WADUnitInvariant is BaseInvariantTest {
 
+    function setUp() public virtual override {
+        BaseInvariantTest.setUp();
+
+        // Selectors to target.
+        // Currently excluding `mintNext`.
+        bytes4[] memory selectors = new bytes4[](11);
+        selectors[0] = DN404Handler.approve.selector;
+        selectors[1] = DN404Handler.transfer.selector;
+        selectors[2] = DN404Handler.transferFrom.selector;
+        selectors[3] = DN404Handler.mint.selector;
+        selectors[4] = DN404Handler.burn.selector;
+        selectors[5] = DN404Handler.setSkipNFT.selector;
+        selectors[6] = DN404Handler.approveNFT.selector;
+        selectors[7] = DN404Handler.setApprovalForAll.selector;
+        selectors[8] = DN404Handler.transferFromNFT.selector;
+        selectors[9] = DN404Handler.setUseDirectTransfersIfPossible.selector;
+        selectors[10] = DN404Handler.setAddToBurnedPool.selector;
+        targetSelector(FuzzSelector({addr: address(dn404Handler), selectors: selectors}));
+    }
+
     function invariantTotalReflectionIsValid() external {
         assertLe(
             dn404Mirror.totalSupply() * _WAD,

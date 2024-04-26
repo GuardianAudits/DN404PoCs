@@ -50,23 +50,6 @@ contract BaseInvariantTest is Test, StdInvariant {
         vm.label(address(dn404Mirror), "dn404Mirror");
         vm.label(address(dn404Handler), "dn404Handler");
 
-        // Selectors to target.
-        // Currently excluding `mintNext` and `setUnit`.
-        bytes4[] memory selectors = new bytes4[](12);
-        selectors[0] = DN404Handler.approve.selector;
-        selectors[1] = DN404Handler.transfer.selector;
-        selectors[2] = DN404Handler.transferFrom.selector;
-        selectors[3] = DN404Handler.mint.selector;
-        selectors[4] = DN404Handler.burn.selector;
-        selectors[5] = DN404Handler.setSkipNFT.selector;
-        selectors[6] = DN404Handler.approveNFT.selector;
-        selectors[7] = DN404Handler.setApprovalForAll.selector;
-        selectors[8] = DN404Handler.transferFromNFT.selector;
-        selectors[9] = DN404Handler.setUseExistsLookup.selector;
-        selectors[10] = DN404Handler.setUseDirectTransfersIfPossible.selector;
-        selectors[11] = DN404Handler.setAddToBurnedPool.selector;
-        targetSelector(FuzzSelector({addr: address(dn404Handler), selectors: selectors}));
-
         // target handlers
         targetContract(address(dn404Handler));
     }
@@ -89,5 +72,11 @@ contract BaseInvariantTest is Test, StdInvariant {
             dn404.mirrorERC721(), address(dn404Mirror), "mirror 721 changed after initialization"
         );
         assertEq(dn404Mirror.baseERC20(), address(dn404), "base erc20 changed after initialization");
+    }
+
+    function invariantBurnedPoolLengthIsTailMinusHead() external {
+        (uint256 burnedHead, uint256 burnedTail) = dn404.burnedPoolHeadTail();
+        uint256[] memory burnedIds = dn404.burnedPoolIds();
+        assertEq(burnedIds.length, burnedTail - burnedHead, "burned ids length != burned tail - burned head");
     }
 }

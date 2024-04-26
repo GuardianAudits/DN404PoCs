@@ -30,6 +30,16 @@ contract DN404Handler is SoladyTest {
 
     event Transfer(address indexed from, address indexed to, uint256 indexed id);
 
+    // Avoid stack-to-deep errors.
+    struct BeforeAfter {
+        uint256 fromBalanceBefore;
+        uint256 toBalanceBefore;
+        uint256 totalSupplyBefore;
+        uint256 fromBalanceAfter;
+        uint256 toBalanceAfter;
+        uint256 totalSupplyAfter;
+    }
+
     constructor(MockDN404CustomUnit _dn404) {
         dn404 = _dn404;
         mirror = DN404Mirror(payable(dn404.mirrorERC721()));
@@ -86,12 +96,13 @@ contract DN404Handler is SoladyTest {
         amount = _bound(amount, 0, dn404.balanceOf(from));
         vm.startPrank(from);
 
-        uint256 fromBalanceBefore = dn404.balanceOf(from);
-        uint256 toBalanceBefore = dn404.balanceOf(to);
-        uint256 totalSupplyBefore = dn404.totalSupply();
+        BeforeAfter memory beforeAfter;
+        beforeAfter.fromBalanceBefore = dn404.balanceOf(from);
+        beforeAfter.toBalanceBefore = dn404.balanceOf(to);
+        beforeAfter.totalSupplyBefore = dn404.totalSupply();
 
-        uint256 numNFTBurns = _zeroFloorSub(mirror.balanceOf(from), fromBalanceBefore / dn404.unit());
-        uint256 numNFTMints = _zeroFloorSub(mirror.balanceOf(to) / dn404.unit(), mirror.balanceOf(to));
+        uint256 numNFTBurns = _zeroFloorSub(mirror.balanceOf(from), (beforeAfter.fromBalanceBefore - amount) / dn404.unit());
+        uint256 numNFTMints = _zeroFloorSub((beforeAfter.toBalanceBefore + amount) / dn404.unit(), mirror.balanceOf(to));
         uint256 n = _min(mirror.balanceOf(from), _min(numNFTBurns, numNFTMints));
         uint256[] memory burnedIds = dn404.burnedPoolIds();
 
@@ -101,45 +112,44 @@ contract DN404Handler is SoladyTest {
 
         // POST-CONDITIONS
         if (success) {
-            if (dn404.useDirectTransfersIfPossible()) {
-                Vm.Log[] memory logs = vm.getRecordedLogs();
-                uint256 id;
-                for (uint256 i = 0; i < n; i++) {
-                    console.logBytes32(logs[i].topics[0]);
-                    if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
-                        // Grab minted ID from logs.
-                        if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
-
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            uint256 id;
+            for (uint256 i = 0; i < logs.length; i++) {
+                if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
+                    // Grab minted ID from logs.
+                    if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
+                    if (n > 0) {
                         for (uint j = 0; j < burnedIds.length; j++) {
-                            console.log("Burned Ids:", burnedIds[j]);
-                            // ❌ Assert transfer direct does not overlap with burned pool.
-                            assertNotEq(burnedIds[j], id, "transfer direct went over burned ids");
+                            // Assert direct transfers do not overlap with burned pool.
+                            if (dn404.useDirectTransfersIfPossible() && i < n) assertNotEq(burnedIds[j], id, "transfer direct went over burned ids");
                         }
                     }
+                    // Assert approval for id has been reset during transfer.
+                    if(mirror.ownerAt(id) != address(0)) assertEq(mirror.getApproved(id), address(0));
                 }
             }
         
-            nftsOwned[from] -= _zeroFloorSub(nftsOwned[from], (fromBalanceBefore - amount) / dn404.unit());
+            nftsOwned[from] -= _zeroFloorSub(nftsOwned[from], (beforeAfter.fromBalanceBefore - amount) / dn404.unit());
             if (!dn404.getSkipNFT(to)) {
-                if (from == to) toBalanceBefore -= amount;
-                nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
+                if (from == to) beforeAfter.toBalanceBefore -= amount;
+                nftsOwned[to] += _zeroFloorSub((beforeAfter.toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
             }
 
-            uint256 fromBalanceAfter = dn404.balanceOf(from);
-            uint256 toBalanceAfter = dn404.balanceOf(to);
-            uint256 totalSupplyAfter = dn404.totalSupply();
+            beforeAfter.fromBalanceAfter = dn404.balanceOf(from);
+            beforeAfter.toBalanceAfter = dn404.balanceOf(to);
+            beforeAfter.totalSupplyAfter = dn404.totalSupply();
 
             // Assert balance updates between addresses are valid.
             if (from != to) {
-                assertEq(fromBalanceAfter + amount, fromBalanceBefore, "balance after + amount != balance before");
-                // assertEq(toBalanceAfter, toBalanceBefore + amount, "balance after != balance before + amount");
+                assertEq(beforeAfter.fromBalanceAfter + amount, beforeAfter.fromBalanceBefore, "balance after + amount != balance before");
+                assertEq(beforeAfter.toBalanceAfter, beforeAfter.toBalanceBefore + amount, "balance after != balance before + amount");
             }
             else {
-                assertEq(fromBalanceAfter, fromBalanceBefore, "balance after != balance before");
+                assertEq(beforeAfter.fromBalanceAfter, beforeAfter.fromBalanceBefore, "balance after != balance before");
             }
             
             // Assert totalSupply stays the same.
-            assertEq(totalSupplyBefore, totalSupplyAfter, "total supply before != total supply after");
+            assertEq(beforeAfter.totalSupplyBefore, beforeAfter.totalSupplyAfter, "total supply before != total supply after");
         }
     }
 
@@ -156,12 +166,13 @@ contract DN404Handler is SoladyTest {
         amount = _bound(amount, 0, dn404.balanceOf(from));
         vm.startPrank(sender);
 
-        uint256 fromBalanceBefore = dn404.balanceOf(from);
-        uint256 toBalanceBefore = dn404.balanceOf(to);
-        uint256 totalSupplyBefore = dn404.totalSupply();
+        BeforeAfter memory beforeAfter;
+        beforeAfter.fromBalanceBefore = dn404.balanceOf(from);
+        beforeAfter.toBalanceBefore = dn404.balanceOf(to);
+        beforeAfter.totalSupplyBefore = dn404.totalSupply();
 
-        uint256 numNFTBurns = _zeroFloorSub(mirror.balanceOf(from), fromBalanceBefore / dn404.unit());
-        uint256 numNFTMints = _zeroFloorSub(mirror.balanceOf(to) / dn404.unit(), mirror.balanceOf(to));
+        uint256 numNFTBurns = _zeroFloorSub(mirror.balanceOf(from), (beforeAfter.fromBalanceBefore - amount) / dn404.unit());
+        uint256 numNFTMints = _zeroFloorSub((beforeAfter.toBalanceBefore + amount) / dn404.unit(), mirror.balanceOf(to));
         uint256 n = _min(mirror.balanceOf(from), _min(numNFTBurns, numNFTMints));
         uint256[] memory burnedIds = dn404.burnedPoolIds();
 
@@ -176,45 +187,44 @@ contract DN404Handler is SoladyTest {
 
         // POST-CONDITIONS
         if (success) {
-            if (dn404.useDirectTransfersIfPossible()) {
-                Vm.Log[] memory logs = vm.getRecordedLogs();
-                uint256 id;
-                for (uint256 i = 0; i < n; i++) {
-                    console.logBytes32(logs[i].topics[0]);
-                    if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
-                        // Grab minted ID from logs.
-                        if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
-
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            uint256 id;
+            for (uint256 i = 0; i < logs.length; i++) {
+                if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
+                    // Grab minted ID from logs.
+                    if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
+                    if (n > 0) {
                         for (uint j = 0; j < burnedIds.length; j++) {
-                            console.log("Burned Ids:", burnedIds[j]);
-                            // Assert transferFrom direct does not overlap with burned pool.
-                            assertNotEq(burnedIds[j], id, "transferFrom direct went over burned ids");
+                            // Assert direct transfers not overlap with burned pool.
+                            if (dn404.useDirectTransfersIfPossible() && i < n) assertNotEq(burnedIds[j], id, "transfer direct went over burned ids");
                         }
                     }
+                    // Assert approval for id has been reset during transfer.
+                    if(mirror.ownerAt(id) != address(0)) assertEq(mirror.getApproved(id), address(0));
                 }
             }
 
-            nftsOwned[from] -= _zeroFloorSub(nftsOwned[from], (fromBalanceBefore - amount) / dn404.unit());
+            nftsOwned[from] -= _zeroFloorSub(nftsOwned[from], (beforeAfter.fromBalanceBefore - amount) / dn404.unit());
             if (!dn404.getSkipNFT(to)) {
-                if (from == to) toBalanceBefore -= amount;
-                nftsOwned[to] += _zeroFloorSub((toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
+                if (from == to) beforeAfter.toBalanceBefore -= amount;
+                nftsOwned[to] += _zeroFloorSub((beforeAfter.toBalanceBefore + amount) / dn404.unit(), nftsOwned[to]);
             }
 
-            uint256 fromBalanceAfter = dn404.balanceOf(from);
-            uint256 toBalanceAfter = dn404.balanceOf(to);
-            // uint256 totalSupplyAfter = dn404.totalSupply();
+            beforeAfter.fromBalanceAfter = dn404.balanceOf(from);
+            beforeAfter.toBalanceAfter = dn404.balanceOf(to);
+            beforeAfter.totalSupplyAfter = dn404.totalSupply();
 
             // Assert balance updates between addresses are valid.
             if (from != to) {
-                assertEq(fromBalanceAfter + amount, fromBalanceBefore, "balance after + amount != balance before");
-                assertEq(dn404.balanceOf(to), toBalanceBefore + amount, "balance after != balance before + amount");
+                assertEq(beforeAfter.fromBalanceAfter + amount, beforeAfter.fromBalanceBefore, "balance after + amount != balance before");
+                assertEq(dn404.balanceOf(to), beforeAfter.toBalanceBefore + amount, "balance after != balance before + amount");
             }
             else {
-                assertEq(fromBalanceAfter, fromBalanceBefore, "balance after != balance before");
+                assertEq(beforeAfter.fromBalanceAfter, beforeAfter.fromBalanceBefore, "balance after != balance before");
             }
             
             // Assert totalSupply stays the same.
-            assertEq(totalSupplyBefore, dn404.totalSupply(), "total supply before != total supply after");
+            assertEq(beforeAfter.totalSupplyBefore, dn404.totalSupply(), "total supply before != total supply after");
         }
     }
 

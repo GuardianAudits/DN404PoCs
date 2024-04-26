@@ -79,4 +79,9 @@ contract BaseInvariantTest is Test, StdInvariant {
         uint256[] memory burnedIds = dn404.burnedPoolIds();
         assertEq(burnedIds.length, burnedTail - burnedHead, "burned ids length != burned tail - burned head");
     }
+
+    function invariantNoUserOwnsInvalidToken() external {
+        address owner = dn404Mirror.ownerAt(type(uint32).max);
+        assertEq(owner, address(0), "user owns uint32 max id");
+    }
 }

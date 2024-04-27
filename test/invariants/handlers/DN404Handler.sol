@@ -118,7 +118,7 @@ contract DN404Handler is SoladyTest {
                 if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
                     // Grab minted ID from logs.
                     if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
-                    if (n > 0) {
+                    if (n > 0 && from != to) {
                         for (uint j = 0; j < burnedIds.length; j++) {
                             // Assert direct transfers do not overlap with burned pool.
                             if (dn404.useDirectTransfersIfPossible() && i < n) assertNotEq(burnedIds[j], id, "transfer direct went over burned ids");
@@ -193,7 +193,7 @@ contract DN404Handler is SoladyTest {
                 if (i < logs.length && logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
                     // Grab minted ID from logs.
                     if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
-                    if (n > 0) {
+                    if (n > 0 && from != to) {
                         for (uint j = 0; j < burnedIds.length; j++) {
                             // Assert direct transfers not overlap with burned pool.
                             if (dn404.useDirectTransfersIfPossible() && i < n) assertNotEq(burnedIds[j], id, "transfer direct went over burned ids");

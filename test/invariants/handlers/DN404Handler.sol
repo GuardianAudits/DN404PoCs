@@ -497,6 +497,10 @@ contract DN404Handler is SoladyTest {
         dn404.setUnit(value);
     }
 
+    function setAux(address target, uint88 value) public {
+        dn404.setAux(target, value);
+    }
+
     /*//////////////////////////////////////////////////////////////////////////
                                      POCS
     //////////////////////////////////////////////////////////////////////////*/

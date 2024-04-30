@@ -23,7 +23,7 @@ import {DN404Handler} from "./handlers/DN404Handler.sol";
 /*** Vault Invariants                                                                                                               ***/
 /**************************************************************************************************************************************/
 // forgefmt: disable-end
-contract BaseInvariantTest is Test, StdInvariant {
+abstract contract BaseInvariantTest is Test, StdInvariant {
     address user0 = vm.addr(uint256(keccak256("User0")));
     address user1 = vm.addr(uint256(keccak256("User1")));
     address user2 = vm.addr(uint256(keccak256("User2")));
@@ -40,7 +40,7 @@ contract BaseInvariantTest is Test, StdInvariant {
 
     function setUp() public virtual {
         dn404 = new MockDN404CustomUnit();
-        dn404.setUnit(10 ** 18);
+        dn404.setUnit(_unit());
         dn404Mirror = new DN404Mirror(address(this));
         dn404.initializeDN404(0, address(0), address(dn404Mirror));
 
@@ -84,4 +84,6 @@ contract BaseInvariantTest is Test, StdInvariant {
         address owner = dn404Mirror.ownerAt(type(uint32).max);
         assertEq(owner, address(0), "user owns uint32 max id");
     }
+
+    function _unit() internal virtual returns(uint256);
 }

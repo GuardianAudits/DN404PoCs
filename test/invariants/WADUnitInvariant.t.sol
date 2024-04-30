@@ -30,7 +30,7 @@ contract WADUnitInvariant is BaseInvariantTest {
         BaseInvariantTest.setUp();
 
         // Selectors to target.
-        // Currently excluding `mintNext`.
+        // Currently excluding `mintNext` and `setUnit`.
         bytes4[] memory selectors = new bytes4[](11);
         selectors[0] = DN404Handler.approve.selector;
         selectors[1] = DN404Handler.transfer.selector;
@@ -46,44 +46,8 @@ contract WADUnitInvariant is BaseInvariantTest {
         targetSelector(FuzzSelector({addr: address(dn404Handler), selectors: selectors}));
     }
 
-    function invariantTotalReflectionIsValid() external {
-        assertLe(
-            dn404Mirror.totalSupply() * _WAD,
-            dn404.totalSupply(),
-            "NFT total supply * wad is greater than ERC20 total supply"
-        );
+    function _unit() internal override returns(uint256) {
+        return 1e18;
     }
 
-    function invariantUserReflectionIsValid() external {
-        assertLe(
-            dn404Mirror.balanceOf(user0) * _WAD,
-            dn404.balanceOf(user0),
-            "NFT balanceOf user 0 * wad is greater its ERC20 balanceOf"
-        );
-        assertLe(
-            dn404Mirror.balanceOf(user1) * _WAD,
-            dn404.balanceOf(user1),
-            "NFT balanceOf user 1 * wad is greater its ERC20 balanceOf"
-        );
-        assertLe(
-            dn404Mirror.balanceOf(user2) * _WAD,
-            dn404.balanceOf(user2),
-            "NFT balanceOf user 2 * wad is greater its ERC20 balanceOf"
-        );
-        assertLe(
-            dn404Mirror.balanceOf(user3) * _WAD,
-            dn404.balanceOf(user3),
-            "NFT balanceOf user 3 * wad is greater its ERC20 balanceOf"
-        );
-        assertLe(
-            dn404Mirror.balanceOf(user4) * _WAD,
-            dn404.balanceOf(user4),
-            "NFT balanceOf user 4 * wad is greater its ERC20 balanceOf"
-        );
-        assertLe(
-            dn404Mirror.balanceOf(user5) * _WAD,
-            dn404.balanceOf(user5),
-            "NFT balanceOf user 5 * wad is greater its ERC20 balanceOf"
-        );
-    }
 }

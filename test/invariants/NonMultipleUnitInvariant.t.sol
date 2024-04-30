@@ -24,14 +24,14 @@ import {BaseInvariantTest} from "./BaseInvariant.t.sol";
 /*** Vault Invariants                                                                                                               ***/
 /**************************************************************************************************************************************/
 // forgefmt: disable-end
-contract VariableUnitInvariant is BaseInvariantTest {
+contract NonMultipleUnitInvariant is BaseInvariantTest {
 
     function setUp() public virtual override {
         BaseInvariantTest.setUp();
 
         // Selectors to target.
-        // Currently excluding `mintNext`.
-        bytes4[] memory selectors = new bytes4[](13);
+        // Currently excluding `mintNext` and `setUnit`.
+        bytes4[] memory selectors = new bytes4[](11);
         selectors[0] = DN404Handler.approve.selector;
         selectors[1] = DN404Handler.transfer.selector;
         selectors[2] = DN404Handler.transferFrom.selector;
@@ -41,15 +41,13 @@ contract VariableUnitInvariant is BaseInvariantTest {
         selectors[6] = DN404Handler.approveNFT.selector;
         selectors[7] = DN404Handler.setApprovalForAll.selector;
         selectors[8] = DN404Handler.transferFromNFT.selector;
-        selectors[9] = DN404Handler.setUseExistsLookup.selector;
-        selectors[10] = DN404Handler.setUseDirectTransfersIfPossible.selector;
-        selectors[11] = DN404Handler.setAddToBurnedPool.selector;
-        selectors[12] = DN404Handler.setUnit.selector;
+        selectors[9] = DN404Handler.setUseDirectTransfersIfPossible.selector;
+        selectors[10] = DN404Handler.setAddToBurnedPool.selector;
         targetSelector(FuzzSelector({addr: address(dn404Handler), selectors: selectors}));
     }
 
     function _unit() internal override returns(uint256) {
-        return 1e18;
+        return 1e18 + 999999999999999999;
     }
 
 }

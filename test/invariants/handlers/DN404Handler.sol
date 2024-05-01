@@ -35,9 +35,19 @@ contract DN404Handler is SoladyTest {
         uint256 fromBalanceBefore;
         uint256 toBalanceBefore;
         uint256 totalSupplyBefore;
+        uint256 totalNFTSupplyBefore;
+        uint256 fromNFTBalanceBefore;
+        uint256 toNFTBalanceBefore;
+        uint88 fromAuxBefore;
+        uint88 toAuxBefore;
         uint256 fromBalanceAfter;
         uint256 toBalanceAfter;
         uint256 totalSupplyAfter;
+        uint256 totalNFTSupplyAfter;
+        uint256 fromNFTBalanceAfter;
+        uint256 toNFTBalanceAfter;
+        uint88 fromAuxAfter;
+        uint88 toAuxAfter;
     }
 
     constructor(MockDN404CustomUnit _dn404) {
@@ -78,6 +88,8 @@ contract DN404Handler is SoladyTest {
         // PRE-CONDITIONS
         address owner = randomAddress(ownerIndexSeed);
         address spender = randomAddress(spenderIndexSeed);
+        uint88 ownerAuxBefore = dn404.getAux(owner);
+        uint88 spenderAuxBefore = dn404.getAux(spender);
 
         if (owner == spender) return;
 
@@ -86,7 +98,13 @@ contract DN404Handler is SoladyTest {
         dn404.approve(spender, amount);
 
         // POST-CONDITIONS
+        uint88 ownerAuxAfter = dn404.getAux(owner);
+        uint88 spenderAuxAfter = dn404.getAux(spender);
+
         assertEq(dn404.allowance(owner, spender), amount, "Allowance != Amount");
+        // Assert auxiliary data is unchanged.
+        assertEq(ownerAuxBefore, ownerAuxAfter, "owner auxiliary data has changed");
+        assertEq(spenderAuxBefore, spenderAuxAfter, "spender auxiliary data has changed");
     }
 
     function transfer(uint256 fromIndexSeed, uint256 toIndexSeed, uint256 amount) public {
@@ -100,6 +118,7 @@ contract DN404Handler is SoladyTest {
         beforeAfter.fromBalanceBefore = dn404.balanceOf(from);
         beforeAfter.toBalanceBefore = dn404.balanceOf(to);
         beforeAfter.totalSupplyBefore = dn404.totalSupply();
+        beforeAfter.toAuxBefore = dn404.getAux(to);
 
         uint256 numNFTBurns = _zeroFloorSub(mirror.balanceOf(from), (beforeAfter.fromBalanceBefore - amount) / dn404.unit());
         uint256 numNFTMints = _zeroFloorSub((beforeAfter.toBalanceBefore + amount) / dn404.unit(), mirror.balanceOf(to));
@@ -138,6 +157,7 @@ contract DN404Handler is SoladyTest {
             beforeAfter.fromBalanceAfter = dn404.balanceOf(from);
             beforeAfter.toBalanceAfter = dn404.balanceOf(to);
             beforeAfter.totalSupplyAfter = dn404.totalSupply();
+            beforeAfter.toAuxAfter = dn404.getAux(to);
 
             // Assert balance updates between addresses are valid.
             if (from != to) {
@@ -150,6 +170,8 @@ contract DN404Handler is SoladyTest {
             
             // Assert totalSupply stays the same.
             assertEq(beforeAfter.totalSupplyBefore, beforeAfter.totalSupplyAfter, "total supply before != total supply after");
+            // Assert auxiliary data is unchanged.
+            assertEq(beforeAfter.toAuxBefore, beforeAfter.toAuxAfter, "auxiliary data has changed");
         }
     }
 
@@ -170,6 +192,7 @@ contract DN404Handler is SoladyTest {
         beforeAfter.fromBalanceBefore = dn404.balanceOf(from);
         beforeAfter.toBalanceBefore = dn404.balanceOf(to);
         beforeAfter.totalSupplyBefore = dn404.totalSupply();
+        beforeAfter.toAuxBefore = dn404.getAux(to);
 
         uint256 numNFTBurns = _zeroFloorSub(mirror.balanceOf(from), (beforeAfter.fromBalanceBefore - amount) / dn404.unit());
         uint256 numNFTMints = _zeroFloorSub((beforeAfter.toBalanceBefore + amount) / dn404.unit(), mirror.balanceOf(to));
@@ -213,6 +236,7 @@ contract DN404Handler is SoladyTest {
             beforeAfter.fromBalanceAfter = dn404.balanceOf(from);
             beforeAfter.toBalanceAfter = dn404.balanceOf(to);
             beforeAfter.totalSupplyAfter = dn404.totalSupply();
+            beforeAfter.toAuxAfter = dn404.getAux(to);
 
             // Assert balance updates between addresses are valid.
             if (from != to) {
@@ -225,6 +249,8 @@ contract DN404Handler is SoladyTest {
             
             // Assert totalSupply stays the same.
             assertEq(beforeAfter.totalSupplyBefore, dn404.totalSupply(), "total supply before != total supply after");
+            // Assert auxiliary data is unchanged.
+            assertEq(beforeAfter.toAuxBefore, beforeAfter.toAuxAfter, "auxiliary data has changed");
         }
     }
 
@@ -233,10 +259,12 @@ contract DN404Handler is SoladyTest {
         address to = randomAddress(toIndexSeed);
         amount = _bound(amount, 0, 100e18);
 
-        uint256 toBalanceBefore = dn404.balanceOf(to);
-        uint256 totalSupplyBefore = dn404.totalSupply();
-        uint256 totalNFTSupplyBefore = mirror.totalSupply();
-        uint256 toNFTBalanceBefore = dn404.balanceOfNFT(to);
+        BeforeAfter memory beforeAfter;
+        beforeAfter.toBalanceBefore = dn404.balanceOf(to);
+        beforeAfter.totalSupplyBefore = dn404.totalSupply();
+        beforeAfter.totalNFTSupplyBefore = mirror.totalSupply();
+        beforeAfter.toNFTBalanceBefore = dn404.balanceOfNFT(to);
+        beforeAfter.toAuxBefore = dn404.getAux(to);
 
         // ACTION
         vm.recordLogs();
@@ -244,9 +272,10 @@ contract DN404Handler is SoladyTest {
 
         // POST-CONDITIONS
         if (success) {
-            uint256 toBalanceAfter = dn404.balanceOf(to);
-            uint256 totalSupplyAfter = dn404.totalSupply();
-            uint256 totalNFTSupplyAfter = mirror.totalSupply();
+            beforeAfter.toBalanceAfter = dn404.balanceOf(to);
+            beforeAfter.totalSupplyAfter = dn404.totalSupply();
+            beforeAfter.totalNFTSupplyAfter = mirror.totalSupply();
+            beforeAfter.toAuxAfter = dn404.getAux(to);
 
             Vm.Log[] memory logs = vm.getRecordedLogs();
             uint256 transferCounter;
@@ -259,20 +288,22 @@ contract DN404Handler is SoladyTest {
             }
         
             if (!dn404.getSkipNFT(to)) {
-                nftsOwned[to] = (toBalanceBefore + amount) / dn404.unit();
+                nftsOwned[to] = (beforeAfter.toBalanceBefore + amount) / dn404.unit();
                 uint256[] memory tokensAfter = dn404.tokensOf(to);
                 assertEq(tokensAfter.length, nftsOwned[to], "owned != len(tokensOf)");
                 // Assert that number of (Transfer events - 1) should match the loop iterations to mint an NFT in `mint`.
                 // Subtract by 1 because one of the Transfer events is for the ERC20 transfer.
-                assertEq(transferCounter - 1, _zeroFloorSub((toBalanceAfter / dn404.unit()), toNFTBalanceBefore), "# of times transfer emitted != mint loop iterations");
+                assertEq(transferCounter - 1, _zeroFloorSub((beforeAfter.toBalanceAfter / dn404.unit()), beforeAfter.toNFTBalanceBefore), "# of times transfer emitted != mint loop iterations");
             }   
 
             // Assert user balance increased by minted amount.
-            assertEq(toBalanceAfter, toBalanceBefore + amount, "balance after != balance before + amount");
+            assertEq(beforeAfter.toBalanceAfter, beforeAfter.toBalanceBefore + amount, "balance after != balance before + amount");
             // Assert totalSupply increased by minted amount.
-            assertEq(totalSupplyBefore + amount, totalSupplyAfter, "supply after != supply before + amount");
+            assertEq(beforeAfter.totalSupplyBefore + amount, beforeAfter.totalSupplyAfter, "supply after != supply before + amount");
             // Assert totalNFTSupply is at least equal to prior state before mint.
-            assertGe(totalNFTSupplyAfter, totalNFTSupplyBefore, "nft supply after < nft supply before");
+            assertGe(beforeAfter.totalNFTSupplyAfter, beforeAfter.totalNFTSupplyBefore, "nft supply after < nft supply before");
+            // Assert auxiliary data is unchanged.
+            assertEq(beforeAfter.toAuxBefore, beforeAfter.toAuxAfter, "auxiliary data has changed");
         }
     }
 
@@ -330,6 +361,7 @@ contract DN404Handler is SoladyTest {
         uint256 totalSupplyBefore = dn404.totalSupply();
         uint256 fromNFTBalanceBefore = mirror.balanceOf(from);
         uint256 totalNFTSupplyBefore = mirror.totalSupply();
+        uint256 fromAuxBefore = dn404.getAux(from);
 
         // ACTION
         dn404.burn(from, amount);
@@ -342,6 +374,7 @@ contract DN404Handler is SoladyTest {
         uint256 totalSupplyAfter = dn404.totalSupply();
         uint256 fromNFTBalanceAfter = mirror.balanceOf(from);
         uint256 totalNFTSupplyAfter = mirror.totalSupply();
+        uint256 fromAuxAfter = dn404.getAux(from);
         // Assert user tokensOf was reduced by numToBurn.
         assertEq(tokensAfter.length, nftsOwned[from], "owned != len(tokensOf)");
         // Assert totalSupply decreased by burned amount.
@@ -350,6 +383,8 @@ contract DN404Handler is SoladyTest {
         assertEq(fromNFTBalanceBefore, fromNFTBalanceAfter + numToBurn, "NFT balance did not decrease appropriately");
         // Assert totalNFTSupply is at most equal to prior state before mint.
         assertLe(totalNFTSupplyAfter, totalNFTSupplyBefore, "nft supply after > nft supply before");
+        // Assert auxiliary data is unchanged.
+        assertEq(fromAuxBefore, fromAuxAfter, "auxiliary data has changed");
     }
 
     function setSkipNFT(uint256 actorIndexSeed, bool status) public {

@@ -409,6 +409,8 @@ contract DN404Handler is SoladyTest {
         if (mirror.ownerAt(id) != owner) {
             owner = mirror.ownerAt(id);
         }
+        uint256 ownerAuxBefore = dn404.getAux(owner);
+        uint256 spenderAuxBefore = dn404.getAux(spender);
 
         // ACTION
         vm.startPrank(owner);
@@ -418,11 +420,16 @@ contract DN404Handler is SoladyTest {
         address approvedSpenderMirror = mirror.getApproved(id);
         address approvedSpenderDN = dn404.getApproved(id);
         address ownerAfter = mirror.ownerAt(id);
+        uint256 ownerAuxAfter = dn404.getAux(owner);
+        uint256 spenderAuxAfter = dn404.getAux(spender);
         // Assert approved spender is requested spender.
         assertEq(approvedSpenderMirror, spender, "spender != approved spender mirror");
         assertEq(approvedSpenderDN, spender, "spender != approved spender DN");
         // Assert that owner of ID did not change.
         assertEq(owner, ownerAfter, "owner changed on approval");
+        // Assert auxiliary data is unchanged.
+        assertEq(ownerAuxBefore, ownerAuxAfter, "owner auxiliary data has changed");
+        assertEq(spenderAuxBefore, spenderAuxAfter, "spender auxiliary data has changed");
     }
 
     function setApprovalForAll(uint256 ownerIndexSeed, uint256 spenderIndexSeed, uint256 id, bool approval)
@@ -462,9 +469,12 @@ contract DN404Handler is SoladyTest {
             sender = from;
         }
 
-        uint256 fromBalanceBefore = dn404.balanceOf(from);
-        uint256 toBalanceBefore = dn404.balanceOf(to);
-        uint256 totalNFTSupplyBefore = mirror.totalSupply();
+        BeforeAfter memory beforeAfter;
+        beforeAfter.fromBalanceBefore = dn404.balanceOf(from);
+        beforeAfter.toBalanceBefore = dn404.balanceOf(to);
+        beforeAfter.totalNFTSupplyBefore = mirror.totalSupply();
+        beforeAfter.fromAuxBefore = dn404.getAux(from);
+        beforeAfter.toAuxBefore = dn404.getAux(to);
 
         // ACTION
         vm.startPrank(sender);
@@ -476,28 +486,33 @@ contract DN404Handler is SoladyTest {
 
         uint256[] memory tokensFromAfter = dn404.tokensOf(from);
         uint256[] memory tokensToAfter = dn404.tokensOf(to);
-        uint256 fromBalanceAfter = dn404.balanceOf(from);
-        uint256 toBalanceAfter = dn404.balanceOf(to);
-        uint256 totalNFTSupplyAfter = mirror.totalSupply();
+        beforeAfter.fromBalanceAfter = dn404.balanceOf(from);
+        beforeAfter.toBalanceAfter = dn404.balanceOf(to);
+        beforeAfter.totalNFTSupplyAfter = mirror.totalSupply();
+        beforeAfter.fromAuxAfter = dn404.getAux(from);
+        beforeAfter.toAuxAfter = dn404.getAux(to);
 
         // Assert length matches internal tracking.
         assertEq(tokensFromAfter.length, nftsOwned[from], "Owned != len(tokensOfFrom)");
         assertEq(tokensToAfter.length, nftsOwned[to], "Owned != len(tokensOfTo)");
         // Assert token balances for `from` and `to` was updated.
         if (from != to) {
-            assertEq(fromBalanceBefore, fromBalanceAfter + dn404.unit(), "before != after + unit");
-            assertEq(toBalanceAfter, toBalanceBefore + dn404.unit(), "after != before + unit");
+            assertEq(beforeAfter.fromBalanceBefore, beforeAfter.fromBalanceAfter + dn404.unit(), "before != after + unit");
+            assertEq(beforeAfter.toBalanceAfter, beforeAfter.toBalanceBefore + dn404.unit(), "after != before + unit");
         }
         else {
-            assertEq(fromBalanceBefore, fromBalanceAfter, "before != after");
-            assertEq(toBalanceAfter, toBalanceBefore, "after != before");
+            assertEq(beforeAfter.fromBalanceBefore, beforeAfter.fromBalanceAfter, "before != after");
+            assertEq(beforeAfter.toBalanceAfter, beforeAfter.toBalanceBefore, "after != before");
         }
         // Assert `to` address owns the transferred NFT.
         assertEq(mirror.ownerAt(id), to, "to != ownerOf");
         // Assert totalNFTSupply is unchanged.
-        assertEq(totalNFTSupplyBefore, totalNFTSupplyAfter, "total supply before != total supply after");
+        assertEq(beforeAfter.totalNFTSupplyBefore, beforeAfter.totalNFTSupplyAfter, "total supply before != total supply after");
         // Assert that approval is reset on transfer.
         assertEq(mirror.getApproved(id), address(0));
+        // Assert auxiliary data is unchanged.
+        assertEq(beforeAfter.fromAuxBefore, beforeAfter.fromAuxAfter, "from auxiliary data has changed");
+        assertEq(beforeAfter.toAuxBefore, beforeAfter.toAuxAfter, "to auxiliary data has changed");
     }
 
     function _zeroFloorSub(uint256 x, uint256 y) private pure returns (uint256 z) {

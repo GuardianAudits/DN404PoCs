@@ -390,6 +390,7 @@ contract DN404Handler is SoladyTest {
     function setSkipNFT(uint256 actorIndexSeed, bool status) public {
         // PRE-CONDITIONS
         address actor = randomAddress(actorIndexSeed);
+        uint256 actorAuxBefore = dn404.getAux(actor);
 
         // ACTION
         vm.startPrank(actor);
@@ -397,7 +398,11 @@ contract DN404Handler is SoladyTest {
 
         // POST-CONDITIONS
         bool isSkipNFT = dn404.getSkipNFT(actor);
+        uint256 actorAuxAfter = dn404.getAux(actor);
+        // Assert skipNFT status is appropriately set.
         assertEq(isSkipNFT, status, "isSKipNFT != status");
+        // Assert auxiliary data is unchanged.
+        assertEq(actorAuxBefore, actorAuxAfter, "auxiliary data has changed");
     }
 
     function approveNFT(uint256 ownerIndexSeed, uint256 spenderIndexSeed, uint256 id) public {
@@ -438,6 +443,8 @@ contract DN404Handler is SoladyTest {
         // PRE-CONDITIONS
         address owner = randomAddress(ownerIndexSeed);
         address spender = randomAddress(spenderIndexSeed);
+        uint256 ownerAuxBefore = dn404.getAux(owner);
+        uint256 spenderAuxBefore = dn404.getAux(spender);
 
         // ACTION
         vm.startPrank(owner);
@@ -445,7 +452,13 @@ contract DN404Handler is SoladyTest {
 
         // POST-CONDITIONS
         bool approvedForAll = mirror.isApprovedForAll(owner, spender);
+        uint256 ownerAuxAfter = dn404.getAux(owner);
+        uint256 spenderAuxAfter = dn404.getAux(spender);
+        // Assert approval status is updated correctly.
         assertEq(approvedForAll, approval, "approved for all != approval");
+        // Assert auxiliary data is unchanged.
+        assertEq(ownerAuxBefore, ownerAuxAfter, "owner auxiliary data has changed");
+        assertEq(spenderAuxBefore, spenderAuxAfter, "spender auxiliary data has changed");
 
     }
 

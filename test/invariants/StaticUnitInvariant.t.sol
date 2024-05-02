@@ -9,21 +9,7 @@ import {MockDN404CustomUnit} from "../utils/mocks/MockDN404CustomUnit.sol";
 import {DN404Handler} from "./handlers/DN404Handler.sol";
 import {BaseInvariantTest} from "./BaseInvariant.t.sol";
 
-// forgefmt: disable-start
-/**************************************************************************************************************************************/
-/*** Invariant Tests                                                                                                                ***/
-/***************************************************************************************************************************************
-
-    * NFT total supply * WAD must always be less than or equal to the ERC20 total supply
-    * NFT balance of a user * WAD must be less than or equal to the ERC20 balance of that user
-    * NFT balance of all users summed up must be equal to the NFT total supply
-    * ERC20 balance of all users summed up must be equal to the ERC20 total supply
-    * Mirror contract known to the base and the base contract known to the mirror never change after initialization
-
-/**************************************************************************************************************************************/
-/*** Vault Invariants                                                                                                               ***/
-/**************************************************************************************************************************************/
-// forgefmt: disable-end
+/// @notice Common invariant test setup for invariants that do not modify the unit post-initialization.
 abstract contract StaticUnitInvariant is BaseInvariantTest {
 
     function setUp() public virtual override {

@@ -20,7 +20,7 @@ import {DN404Handler} from "./handlers/DN404Handler.sol";
     * Mirror contract known to the base and the base contract known to the mirror never change after initialization
 
 /**************************************************************************************************************************************/
-/*** Vault Invariants                                                                                                               ***/
+/*** Common setup and invariants used by all implemented invariant tests.                                                           ***/
 /**************************************************************************************************************************************/
 // forgefmt: disable-end
 abstract contract BaseInvariantTest is Test, StdInvariant {

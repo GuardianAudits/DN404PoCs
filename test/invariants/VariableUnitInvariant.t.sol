@@ -9,21 +9,8 @@ import {MockDN404CustomUnit} from "../utils/mocks/MockDN404CustomUnit.sol";
 import {DN404Handler} from "./handlers/DN404Handler.sol";
 import {BaseInvariantTest} from "./BaseInvariant.t.sol";
 
-// forgefmt: disable-start
-/**************************************************************************************************************************************/
-/*** Invariant Tests                                                                                                                ***/
-/***************************************************************************************************************************************
-
-    * NFT total supply * WAD must always be less than or equal to the ERC20 total supply
-    * NFT balance of a user * WAD must be less than or equal to the ERC20 balance of that user
-    * NFT balance of all users summed up must be equal to the NFT total supply
-    * ERC20 balance of all users summed up must be equal to the ERC20 total supply
-    * Mirror contract known to the base and the base contract known to the mirror never change after initialization
-
-/**************************************************************************************************************************************/
-/*** Vault Invariants                                                                                                               ***/
-/**************************************************************************************************************************************/
-// forgefmt: disable-end
+/// @dev Invariant tests that modify the unit throughout execution with `setUnit`.
+/// @notice This will currently display reverts as the handler's nftsOwned must be adjusted for dynamic units.
 contract VariableUnitInvariant is BaseInvariantTest {
 
     function setUp() public virtual override {
@@ -44,10 +31,11 @@ contract VariableUnitInvariant is BaseInvariantTest {
         selectors[9] = DN404Handler.setUseExistsLookup.selector;
         selectors[10] = DN404Handler.setUseDirectTransfersIfPossible.selector;
         selectors[11] = DN404Handler.setAddToBurnedPool.selector;
-        selectors[12] = DN404Handler.setUnit.selector;
+        selectors[12] = DN404Handler.setUnit.selector; // Allow for dynamic unit.
         targetSelector(FuzzSelector({addr: address(dn404Handler), selectors: selectors}));
     }
 
+    // Sets the initial unit and then will be modified on the DN404 contract during the run.
     function _unit() internal override returns(uint256) {
         return 1e18;
     }

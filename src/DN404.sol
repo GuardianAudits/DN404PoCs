@@ -516,12 +516,12 @@ abstract contract DN404 {
         uint256 maxId;
         unchecked {
             uint256 preTotalSupply = uint256($.totalSupply);
-            id = preTotalSupply / _unit() + 1;
             uint256 totalSupply_ = uint256(preTotalSupply) + amount;
             $.totalSupply = uint96(totalSupply_);
             uint256 overflows = _toUint(_totalSupplyOverflows(totalSupply_));
             if (overflows | _toUint(totalSupply_ < amount) != 0) revert TotalSupplyOverflow();
             maxId = totalSupply_ / _unit();
+            id = _wrapNFTId(preTotalSupply / _unit() + 1, maxId);
         }
         unchecked {
             if (_isZero(toAddressData.flags & _ADDRESS_DATA_SKIP_NFT_FLAG)) {

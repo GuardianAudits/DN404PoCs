@@ -334,6 +334,11 @@ contract DN404Test is SoladyTest {
                 for (uint256 j; j != tokens.length; ++j) {
                     t.tokenIdCeil |= tokens[j];
                 }
+                if (_random() % 4 == 0) {
+                    for (uint256 j; j != tokens.length; ++j) {
+                        assertEq(mirror.ownerOf(tokens[j]), t.a);
+                    }
+                }
                 assertEq(tokens.length, t.nftBalance);
             }
             assertEq(t.balanceSum, dn.totalSupply());

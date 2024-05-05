@@ -418,6 +418,11 @@ abstract contract DN404 {
     /// Will mint NFTs to `to` if the recipient's new balance supports
     /// additional NFTs ***AND*** the `to` address's skipNFT flag is set to false.
     ///
+    /// Note:
+    /// - May mint more NFTs than `amount / _unit()`.
+    ///   The number of NFTs minted is what is needed to make `to`'s NFT balance whole.
+    /// - Token IDs may wrap around `totalSupply / _unit()` back to 1.
+    ///
     /// Emits a {Transfer} event.
     function _mint(address to, uint256 amount) internal virtual {
         if (to == address(0)) revert TransferToZeroAddress();
@@ -497,6 +502,11 @@ abstract contract DN404 {
     ///
     /// Will mint NFTs to `to` if the recipient's new balance supports
     /// additional NFTs ***AND*** the `to` address's skipNFT flag is set to false.
+    ///
+    /// Note:
+    /// - May mint more NFTs than `amount / _unit()`.
+    ///   The number of NFTs minted is what is needed to make `to`'s NFT balance whole.
+    /// - Token IDs may wrap around `totalSupply / _unit()` back to 1.
     ///
     /// Emits a {Transfer} event.
     function _mintNext(address to, uint256 amount) internal virtual {

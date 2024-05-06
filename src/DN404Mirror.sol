@@ -60,10 +60,6 @@ contract DN404Mirror {
     /// does not implement ERC721Receiver.
     error TransferToNonERC721ReceiverImplementer();
 
-    /// @dev Thrown when linking to the DN404 base contract and the
-    /// DN404 supportsInterface check fails or the call reverts.
-    error CannotLink();
-
     /// @dev Thrown when a linkMirrorContract call is received and the
     /// NFT mirror contract has already been linked to a DN404 base contract.
     error AlreadyLinked();

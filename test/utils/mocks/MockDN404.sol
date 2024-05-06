@@ -183,7 +183,28 @@ contract MockDN404 is DN404 {
         require(to.length == n);
         unchecked {
             for (uint256 i; i != n; ++i) {
-                require(ids[i] <= 2 ** 32 - 1);
+                uint256 id = ids[i];
+                require(id <= 2 ** 32 - 1);
+                if (from[i] != address(0) && to[i] != address(0)) {
+                    require(_ownerAt(id) == to[i]);
+                }
+                if (from[i] == address(0)) {
+                    require(to[i] != address(0));
+                    require(_ownerAt(id) == to[i]);
+                }
+                if (to[i] == address(0)) {
+                    require(from[i] != address(0));
+                    bool hasRemint = false;
+                    for (uint256 j = i + 1; j < n; ++j) {
+                        if (ids[j] == id && to[j] != address(0)) {
+                            hasRemint = true;
+                            j = n;
+                        }
+                    }
+                    if (!hasRemint) {
+                        require(_ownerAt(id) == address(0));
+                    }
+                }
             }
         }
     }

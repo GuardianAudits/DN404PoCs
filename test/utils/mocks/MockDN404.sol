@@ -40,7 +40,7 @@ contract MockDN404 is DN404 {
     }
 
     function registerAndResolveAlias(address target) public returns (uint32) {
-        return _registerAndResolveAlias(_addressData(target), target);
+        return _registerAndResolveAlias(_getDN404Storage().addressData[target], target);
     }
 
     function mint(address to, uint256 amount) public {
@@ -63,8 +63,9 @@ contract MockDN404 is DN404 {
         _initializeDN404(initialTokenSupply, initialSupplyOwner, mirrorNFTContract);
     }
 
-    function getAddressDataInitialized(address target) public view returns (bool) {
-        return _getDN404Storage().addressData[target].flags & _ADDRESS_DATA_INITIALIZED_FLAG != 0;
+    function getAddressDataSkipNFTInitialized(address target) public view returns (bool) {
+        return _getDN404Storage().addressData[target].flags
+            & _ADDRESS_DATA_SKIP_NFT_INITIALIZED_FLAG != 0;
     }
 
     function setAux(address target, uint88 value) public {

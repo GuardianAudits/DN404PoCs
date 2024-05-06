@@ -97,8 +97,8 @@ abstract contract DN404 {
     /*                         CONSTANTS                          */
     /*-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»-»*/
 
-    /// @dev The flag to denote that the address data is initialized.
-    uint8 internal constant _ADDRESS_DATA_INITIALIZED_FLAG = 1 << 0;
+    /// @dev The flag to denote that the skip NFT flag is initialized.
+    uint8 internal constant _ADDRESS_DATA_SKIP_NFT_INITIALIZED_FLAG = 1 << 0;
 
     /// @dev The flag to denote that the address should skip NFTs.
     uint8 internal constant _ADDRESS_DATA_SKIP_NFT_FLAG = 1 << 1;
@@ -236,7 +236,7 @@ abstract contract DN404 {
             if (_totalSupplyOverflows(initialTokenSupply)) revert TotalSupplyOverflow();
 
             $.totalSupply = uint96(initialTokenSupply);
-            AddressData storage initialOwnerAddressData = _addressData(initialSupplyOwner);
+            AddressData storage initialOwnerAddressData = $.addressData[initialSupplyOwner];
             initialOwnerAddressData.balance = uint96(initialTokenSupply);
 
             /// @solidity memory-safe-assembly
@@ -435,9 +435,9 @@ abstract contract DN404 {
     function _mint(address to, uint256 amount) internal virtual {
         if (to == address(0)) revert TransferToZeroAddress();
 
-        AddressData storage toAddressData = _addressData(to);
         DN404Storage storage $ = _getDN404Storage();
         if ($.mirrorERC721 == address(0)) revert DNNotInitialized();
+        AddressData storage toAddressData = $.addressData[to];
 
         _DNMintTemps memory t;
         unchecked {
@@ -454,7 +454,7 @@ abstract contract DN404 {
                 if (overflows | _toUint(totalSupply_ < amount) != 0) revert TotalSupplyOverflow();
                 maxId = totalSupply_ / _unit();
             }
-            if (_isZero(toAddressData.flags & _ADDRESS_DATA_SKIP_NFT_FLAG)) {
+            if (!getSkipNFT(to)) {
                 Uint32Map storage toOwned = $.owned[to];
                 Uint32Map storage oo = $.oo;
                 uint256 toIndex = toAddressData.ownedLength;
@@ -527,9 +527,9 @@ abstract contract DN404 {
     function _mintNext(address to, uint256 amount) internal virtual {
         if (to == address(0)) revert TransferToZeroAddress();
 
-        AddressData storage toAddressData = _addressData(to);
         DN404Storage storage $ = _getDN404Storage();
         if ($.mirrorERC721 == address(0)) revert DNNotInitialized();
+        AddressData storage toAddressData = $.addressData[to];
 
         _DNMintTemps memory t;
         unchecked {
@@ -549,7 +549,7 @@ abstract contract DN404 {
                 maxId = totalSupply_ / _unit();
                 id = _wrapNFTId(preTotalSupply / _unit() + 1, maxId);
             }
-            if (_isZero(toAddressData.flags & _ADDRESS_DATA_SKIP_NFT_FLAG)) {
+            if (!getSkipNFT(to)) {
                 Uint32Map storage toOwned = $.owned[to];
                 Uint32Map storage oo = $.oo;
                 uint256 toIndex = toAddressData.ownedLength;
@@ -691,7 +691,7 @@ abstract contract DN404 {
 
         DN404Storage storage $ = _getDN404Storage();
         AddressData storage fromAddressData = $.addressData[from];
-        AddressData storage toAddressData = _addressData(to);
+        AddressData storage toAddressData = $.addressData[to];
         if ($.mirrorERC721 == address(0)) revert DNNotInitialized();
 
         _DNTransferTemps memory t;
@@ -708,7 +708,7 @@ abstract contract DN404 {
                 toAddressData.balance = uint96(toBalance);
                 t.numNFTBurns = _zeroFloorSub(t.fromOwnedLength, fromBalance / _unit());
 
-                if (_isZero(toAddressData.flags & _ADDRESS_DATA_SKIP_NFT_FLAG)) {
+                if (!getSkipNFT(to)) {
                     if (from == to) t.toOwnedLength = t.fromOwnedLength - t.numNFTBurns;
                     t.numNFTMints = _zeroFloorSub(toBalance / _unit(), t.toOwnedLength);
                 }
@@ -978,10 +978,15 @@ abstract contract DN404 {
 
     /// @dev Returns true if minting and transferring ERC20s to `owner` will skip minting NFTs.
     /// Returns false otherwise.
-    function getSkipNFT(address owner) public view virtual returns (bool) {
-        AddressData storage d = _getDN404Storage().addressData[owner];
-        if (_isZero(d.flags & _ADDRESS_DATA_INITIALIZED_FLAG)) return _hasCode(owner);
-        return d.flags & _ADDRESS_DATA_SKIP_NFT_FLAG != 0;
+    function getSkipNFT(address owner) public view virtual returns (bool result) {
+        uint8 flags = _getDN404Storage().addressData[owner].flags;
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := iszero(iszero(and(flags, _ADDRESS_DATA_SKIP_NFT_FLAG)))
+            if iszero(and(flags, _ADDRESS_DATA_SKIP_NFT_INITIALIZED_FLAG)) {
+                result := iszero(iszero(extcodesize(owner)))
+            }
+        }
     }
 
     /// @dev Sets the caller's skipNFT flag to `skipNFT`. Returns true.
@@ -998,28 +1003,17 @@ abstract contract DN404 {
     ///
     /// Emits a {SkipNFTSet} event.
     function _setSkipNFT(address owner, bool state) internal virtual {
-        AddressData storage d = _addressData(owner);
-        if ((d.flags & _ADDRESS_DATA_SKIP_NFT_FLAG != 0) != state) {
-            d.flags ^= _ADDRESS_DATA_SKIP_NFT_FLAG;
-        }
+        AddressData storage d = _getDN404Storage().addressData[owner];
+        uint8 flags = d.flags;
         /// @solidity memory-safe-assembly
         assembly {
+            let s := xor(iszero(and(flags, _ADDRESS_DATA_SKIP_NFT_FLAG)), iszero(state))
+            flags := xor(mul(_ADDRESS_DATA_SKIP_NFT_FLAG, s), flags)
+            flags := or(_ADDRESS_DATA_SKIP_NFT_INITIALIZED_FLAG, flags)
             mstore(0x00, iszero(iszero(state)))
             log2(0x00, 0x20, _SKIP_NFT_SET_EVENT_SIGNATURE, shr(96, shl(96, owner)))
         }
-    }
-
-    /// @dev Returns a storage data pointer for account `owner` AddressData
-    ///
-    /// Initializes account `owner` AddressData if it is not currently initialized.
-    function _addressData(address owner) internal virtual returns (AddressData storage d) {
-        d = _getDN404Storage().addressData[owner];
-        unchecked {
-            if (_isZero(d.flags & _ADDRESS_DATA_INITIALIZED_FLAG)) {
-                uint256 skipNFT = _toUint(_hasCode(owner)) * _ADDRESS_DATA_SKIP_NFT_FLAG;
-                d.flags = uint8(skipNFT | _ADDRESS_DATA_INITIALIZED_FLAG);
-            }
-        }
+        d.flags = flags;
     }
 
     /// @dev Returns the `addressAlias` of account `to`.

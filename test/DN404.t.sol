@@ -212,7 +212,7 @@ contract DN404Test is SoladyTest {
             if (t & 1 == 0) a = LibClone.clone(a);
             // Contracts skip NFTs by default.
             assertEq(dn.getSkipNFT(a), t & 1 == 0);
-            assertEq(dn.getAddressDataInitialized(a), false);
+            assertEq(dn.getAddressDataSkipNFTInitialized(a), false);
             _testSetAndGetSkipNFT(a, true);
             _testSetAndGetSkipNFT(a, false);
             _testSetAndGetSkipNFT(a, true);
@@ -225,7 +225,7 @@ contract DN404Test is SoladyTest {
         emit SkipNFTSet(target, status);
         dn.setSkipNFT(status);
         assertEq(dn.getSkipNFT(target), status);
-        assertEq(dn.getAddressDataInitialized(target), true);
+        assertEq(dn.getAddressDataSkipNFTInitialized(target), true);
     }
 
     function testSetAndGetAux(address a, uint88 aux) public {

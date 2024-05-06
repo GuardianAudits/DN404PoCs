@@ -169,7 +169,7 @@ contract MockDN404 is DN404 {
         }
     }
 
-    function _afterNFTTransfer(address from, address to, uint256 id) internal virtual override {
+    function _afterNFTTransfers(address[] memory from, address[] memory to, uint256[] memory id) internal virtual override {
         /// @solidity memory-safe-assembly
         assembly {
             mstore(0x00, from)

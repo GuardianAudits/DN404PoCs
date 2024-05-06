@@ -307,7 +307,10 @@ abstract contract DN404 {
 
     /// @dev Hook that is called after a batch of NFT transfers.
     /// The lengths of `from`, `to`, and `ids` are guaranteed to be the same.
-    function _afterNFTTransfers(address[] memory from, address[] memory to, uint256[] memory ids) internal virtual {}
+    function _afterNFTTransfers(address[] memory from, address[] memory to, uint256[] memory ids)
+        internal
+        virtual
+    {}
 
     /// @dev Override this function to return true if `_afterNFTTransfers` is used.
     /// This is to help the compiler avoid producing dead bytecode.
@@ -484,7 +487,6 @@ abstract contract DN404 {
                         _set(toOwned, toIndex, uint32(id));
                         _setOwnerAliasAndOwnedIndex(oo, id, t.toAlias, uint32(toIndex++));
                         _packedLogsAppend(t.packedLogs, id);
-                        // _afterNFTTransfer(address(0), to, id);
                     } while (toIndex != t.toEnd);
 
                     $.nextTokenId = uint32(t.nextTokenId);
@@ -498,6 +500,13 @@ abstract contract DN404 {
             // Emit the {Transfer} event.
             mstore(0x00, amount)
             log3(0x00, 0x20, _TRANSFER_EVENT_SIGNATURE, 0, shr(96, shl(96, to)))
+        }
+        if (_useAfterNFTTransfers()) {
+            _afterNFTTransfers(
+                _zeroAddresses(t.numNFTMints),
+                _filled(t.numNFTMints, to),
+                _packedLogsIds(t.packedLogs)
+            );
         }
     }
 
@@ -566,7 +575,6 @@ abstract contract DN404 {
                         _set(toOwned, toIndex, uint32(id));
                         _setOwnerAliasAndOwnedIndex(oo, id, t.toAlias, uint32(toIndex++));
                         _packedLogsAppend(t.packedLogs, id);
-                        // _afterNFTTransfer(address(0), to, id);
                         id = _wrapNFTId(id + 1, maxId);
                     } while (toIndex != t.toEnd);
 
@@ -581,7 +589,11 @@ abstract contract DN404 {
             log3(0x00, 0x20, _TRANSFER_EVENT_SIGNATURE, 0, shr(96, shl(96, to)))
         }
         if (_useAfterNFTTransfers()) {
-
+            _afterNFTTransfers(
+                _zeroAddresses(t.numNFTMints),
+                _filled(t.numNFTMints, to),
+                _packedLogsIds(t.packedLogs)
+            );
         }
     }
 
@@ -639,7 +651,6 @@ abstract contract DN404 {
                         _set($.mayHaveNFTApproval, id, false);
                         delete $.nftApprovals[id];
                     }
-                    // _afterNFTTransfer(from, address(0), id);
                 } while (fromIndex != fromEnd);
 
                 if (addToBurnedPool) $.burnedPoolTail = burnedPoolTail;
@@ -651,6 +662,13 @@ abstract contract DN404 {
             // Emit the {Transfer} event.
             mstore(0x00, amount)
             log3(0x00, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, shl(96, from)), 0)
+        }
+        if (_useAfterNFTTransfers()) {
+            _afterNFTTransfers(
+                _filled(t.numNFTBurns, from),
+                _zeroAddresses(t.numNFTBurns),
+                _packedLogsIds(t.packedLogs)
+            );
         }
     }
 
@@ -721,7 +739,6 @@ abstract contract DN404 {
                         _set($.mayHaveNFTApproval, id, false);
                         delete $.nftApprovals[id];
                     }
-                    // _afterNFTTransfer(from, to, id);
                 } while (++toIndex != n);
 
                 toAddressData.ownedLength = uint32(t.toOwnedLength = toIndex);
@@ -754,7 +771,6 @@ abstract contract DN404 {
                         _set($.mayHaveNFTApproval, id, false);
                         delete $.nftApprovals[id];
                     }
-                    // _afterNFTTransfer(from, address(0), id);
                 } while (fromIndex != t.fromEnd);
 
                 if (addToBurnedPool) $.burnedPoolTail = (t.burnedPoolTail = burnedPoolTail);
@@ -787,7 +803,6 @@ abstract contract DN404 {
                     _set(toOwned, toIndex, uint32(id));
                     _setOwnerAliasAndOwnedIndex(oo, id, t.toAlias, uint32(toIndex++));
                     _packedLogsAppend(t.packedLogs, id);
-                    // _afterNFTTransfer(address(0), to, id);
                 } while (toIndex != t.toEnd);
 
                 $.burnedPoolHead = burnedPoolHead;
@@ -803,6 +818,16 @@ abstract contract DN404 {
             mstore(0x00, amount)
             // forgefmt: disable-next-item
             log3(0x00, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, shl(96, from)), shr(96, shl(96, to)))
+        }
+        if (_useAfterNFTTransfers()) {
+            uint256 n = _directLogsLength(t.directLogs);
+            uint256 numNFTMints = t.numNFTMints;
+            uint256 numNFTBurns = t.numNFTBurns;
+            _afterNFTTransfers(
+                _concat(_filled(n, from), _filled(numNFTBurns, from), _zeroAddresses(numNFTMints)),
+                _concat(_filled(n, to), _zeroAddresses(numNFTBurns), _filled(numNFTMints, to)),
+                _concat(_directLogsIds(t.directLogs), _packedLogsIds(t.packedLogs))
+            );
         }
     }
 
@@ -891,7 +916,6 @@ abstract contract DN404 {
             _set(owned[to], n, uint32(id));
             _setOwnerAliasAndOwnedIndex(oo, id, _registerAndResolveAlias(toAddressData, to), n);
         }
-        // _afterNFTTransfer(from, to, id);
         /// @solidity memory-safe-assembly
         assembly {
             // Emit the {Transfer} event.
@@ -899,6 +923,7 @@ abstract contract DN404 {
             // forgefmt: disable-next-item
             log3(0x00, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, shl(96, from)), shr(96, shl(96, to)))
         }
+        if (_useAfterNFTTransfers()) {}
     }
 
     /*«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-*/
@@ -1428,7 +1453,8 @@ abstract contract DN404 {
     function _directLogsLength(bytes32 p) private pure returns (uint256 n) {
         /// @solidity memory-safe-assembly
         assembly {
-            n := mul(mload(mul(iszero(iszero(p)), mload(add(0x20, p)))), iszero(iszero(p)))
+            n := iszero(iszero(p))
+            n := mul(mload(mul(n, mload(add(0x20, p)))), n)
         }
     }
 
@@ -1482,11 +1508,20 @@ abstract contract DN404 {
         }
     }
 
+    /// @dev Returns the token IDs of the direct logs.
+    function _directLogsIds(bytes32 p) private pure returns (uint256[] memory ids) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            if p { ids := mload(add(p, 0x20)) }
+        }
+    }
+
     /// @dev Returns the number of entries in the packed logs.
     function _packedLogsLength(bytes32 p) private pure returns (uint256 n) {
         /// @solidity memory-safe-assembly
         assembly {
-            n := mul(mload(mul(iszero(iszero(p)), mload(add(0x40, p)))), iszero(iszero(p)))
+            n := iszero(iszero(p))
+            n := mul(mload(mul(n, mload(add(0x40, p)))), n)
         }
     }
 
@@ -1499,7 +1534,7 @@ abstract contract DN404 {
             //     uint256 addressAndBit;
             //     uint256[] logs;
             p := mload(0x40)
-            let logs := add(p, 0x60)
+            let logs := add(p, 0xc0)
             mstore(logs, n) // Store the length.
             let offset := add(0x20, logs) // Skip the word for `p.logs.length`.
             mstore(0x40, add(offset, shl(5, n))) // Allocate memory.
@@ -1538,6 +1573,94 @@ abstract contract DN404 {
             if iszero(and(eq(mload(o), 1), call(gas(), mirror, 0, add(o, 0x1c), n, o, 0x20))) {
                 revert(o, 0x00)
             }
+        }
+    }
+
+    /// @dev Returns the token IDs of the packed logs (destructively).
+    function _packedLogsIds(bytes32 p) private pure returns (uint256[] memory ids) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            if p {
+                ids := mload(add(p, 0x40))
+                let o := add(ids, 0x20)
+                let end := add(o, shl(5, mload(ids)))
+                for {} iszero(eq(o, end)) { o := add(o, 0x20) } {
+                    mstore(o, shr(168, shl(160, mload(o))))
+                }
+            }
+        }
+    }
+
+    /// @dev Returns an array of zero addresses.
+    function _zeroAddresses(uint256 n) private pure returns (address[] memory result) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := mload(0x40)
+            mstore(0x40, add(add(result, 0x20), shl(5, n)))
+            mstore(result, n)
+            codecopy(add(result, 0x20), codesize(), shl(5, n))
+        }
+    }
+
+    /// @dev Returns an array of addresses, each set to `value`.
+    function _filled(uint256 n, address value) private pure returns (address[] memory result) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := mload(0x40)
+            let o := add(result, 0x20)
+            let end := add(o, shl(5, n))
+            mstore(0x40, end)
+            mstore(result, n)
+            value := shr(96, shl(96, value))
+            for {} iszero(eq(o, end)) { o := add(o, 0x20) } { mstore(o, value) }
+        }
+    }
+
+    /// @dev Concatenates the arrays.
+    function _concat(uint256[] memory a, uint256[] memory b)
+        private
+        view
+        returns (uint256[] memory result)
+    {
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := mload(0x40)
+            let aLength := mload(a)
+            let bLength := mload(b)
+            let n := add(aLength, bLength)
+            mstore(result, n)
+            let o := add(result, 0x20)
+            mstore(0x40, add(o, shl(5, n)))
+            n := shl(5, aLength)
+            pop(staticcall(gas(), 4, add(a, 0x20), n, o, n))
+            o := add(o, n)
+            n := shl(5, bLength)
+            pop(staticcall(gas(), 4, add(b, 0x20), n, o, n))
+        }
+    }
+
+    /// @dev Concatenates the arrays.
+    function _concat(address[] memory a, address[] memory b, address[] memory c)
+        private
+        view
+        returns (address[] memory result)
+    {
+        result = _toAddresses(_concat(_toUints(a), _concat(_toUints(b), _toUints(c))));
+    }
+
+    /// @dev Reinterpret cast to an uint array.
+    function _toUints(address[] memory a) private pure returns (uint256[] memory casted) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            casted := a
+        }
+    }
+
+    /// @dev Reinterpret cast to an address array.
+    function _toAddresses(uint256[] memory a) private pure returns (address[] memory casted) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            casted := a
         }
     }
 

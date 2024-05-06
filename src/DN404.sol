@@ -847,11 +847,16 @@ abstract contract DN404 {
         internal
         virtual
     {
-        _transferFromNFT(from, to, id, msgSender);
         // Emit ERC721 {Transfer} event.
+        // We do this before the `_transferFromNFT`, as `_transferFromNFT` may use
+        // the `_afterNFTTransfers` hook, which may trigger more transfers.
+        // This helps keeps the sequence of emitted events consistent.
+        // Since `mirrorERC721` is a trusted contract, we can do this.
         bytes32 directLogs = _directLogsMalloc(1, from, to);
         _directLogsAppend(directLogs, id);
         _directLogsSend(directLogs, _getDN404Storage().mirrorERC721);
+
+        _transferFromNFT(from, to, id, msgSender);
     }
 
     /// @dev Transfers token `id` from `from` to `to`.
@@ -923,7 +928,9 @@ abstract contract DN404 {
             // forgefmt: disable-next-item
             log3(0x00, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, shl(96, from)), shr(96, shl(96, to)))
         }
-        if (_useAfterNFTTransfers()) {}
+        if (_useAfterNFTTransfers()) {
+            _afterNFTTransfers(_filled(1, from), _filled(1, to), _filled(1, id));
+        }
     }
 
     /*«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-«-*/
@@ -1602,8 +1609,8 @@ abstract contract DN404 {
         }
     }
 
-    /// @dev Returns an array of addresses, each set to `value`.
-    function _filled(uint256 n, address value) private pure returns (address[] memory result) {
+    /// @dev Returns an array each set to `value`.
+    function _filled(uint256 n, uint256 value) private pure returns (uint256[] memory result) {
         /// @solidity memory-safe-assembly
         assembly {
             result := mload(0x40)
@@ -1611,9 +1618,13 @@ abstract contract DN404 {
             let end := add(o, shl(5, n))
             mstore(0x40, end)
             mstore(result, n)
-            value := shr(96, shl(96, value))
             for {} iszero(eq(o, end)) { o := add(o, 0x20) } { mstore(o, value) }
         }
+    }
+
+    /// @dev Returns an array each set to `value`.
+    function _filled(uint256 n, address value) private pure returns (address[] memory result) {
+        result = _toAddresses(_filled(n, uint160(value)));
     }
 
     /// @dev Concatenates the arrays.

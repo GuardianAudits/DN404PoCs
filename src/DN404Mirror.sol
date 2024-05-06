@@ -126,6 +126,9 @@ contract DN404Mirror {
     /// @dev Returns the Uniform Resource Identifier (URI) for token `id` from
     /// the base DN404 contract.
     function tokenURI(uint256 id) public view virtual returns (string memory) {
+        ownerOf(id); // `onwerOf` reverts if the token does not exist.
+        // We'll leave if optional for `_tokenURI` to revert for non-existent token
+        // on the ERC20 side, since this is only recommended by the ERC721 standard.
         return _readString(0xc87b56dd, id); // `tokenURI(uint256)`.
     }
 

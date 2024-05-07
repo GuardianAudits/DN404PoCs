@@ -33,4 +33,45 @@ abstract contract StaticUnitInvariant is BaseInvariantTest {
         targetSelector(FuzzSelector({addr: address(dn404Handler), selectors: selectors}));
     }
 
+    function invariantTotalReflectionIsValid() external {
+        assertLe(
+            dn404Mirror.totalSupply() * _unit(),
+            dn404.totalSupply(),
+            "NFT total supply * wad is greater than ERC20 total supply"
+        );
+    }
+
+    function invariantUserReflectionIsValid() external {
+        assertLe(
+            dn404Mirror.balanceOf(user0) * _unit(),
+            dn404.balanceOf(user0),
+            "NFT balanceOf user 0 * wad is greater its ERC20 balanceOf"
+        );
+        assertLe(
+            dn404Mirror.balanceOf(user1) * _unit(),
+            dn404.balanceOf(user1),
+            "NFT balanceOf user 1 * wad is greater its ERC20 balanceOf"
+        );
+        assertLe(
+            dn404Mirror.balanceOf(user2) * _unit(),
+            dn404.balanceOf(user2),
+            "NFT balanceOf user 2 * wad is greater its ERC20 balanceOf"
+        );
+        assertLe(
+            dn404Mirror.balanceOf(user3) * _unit(),
+            dn404.balanceOf(user3),
+            "NFT balanceOf user 3 * wad is greater its ERC20 balanceOf"
+        );
+        assertLe(
+            dn404Mirror.balanceOf(user4) * _unit(),
+            dn404.balanceOf(user4),
+            "NFT balanceOf user 4 * wad is greater its ERC20 balanceOf"
+        );
+        assertLe(
+            dn404Mirror.balanceOf(user5) * _unit(),
+            dn404.balanceOf(user5),
+            "NFT balanceOf user 5 * wad is greater its ERC20 balanceOf"
+        );
+    }
+
 }

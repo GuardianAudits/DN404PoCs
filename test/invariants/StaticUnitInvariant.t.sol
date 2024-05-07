@@ -16,8 +16,8 @@ abstract contract StaticUnitInvariant is BaseInvariantTest {
         BaseInvariantTest.setUp();
 
         // Selectors to target.
-        // Currently excluding `mintNext` and `setUnit`.
-        bytes4[] memory selectors = new bytes4[](12);
+        // Currently excluding `setUnit`.
+        bytes4[] memory selectors = new bytes4[](13);
         selectors[0] = DN404Handler.approve.selector;
         selectors[1] = DN404Handler.transfer.selector;
         selectors[2] = DN404Handler.transferFrom.selector;
@@ -30,6 +30,7 @@ abstract contract StaticUnitInvariant is BaseInvariantTest {
         selectors[9] = DN404Handler.setUseDirectTransfersIfPossible.selector;
         selectors[10] = DN404Handler.setAddToBurnedPool.selector;
         selectors[11] = DN404Handler.setAux.selector;
+        selectors[12] = DN404Handler.mintNext.selector;
         targetSelector(FuzzSelector({addr: address(dn404Handler), selectors: selectors}));
     }
 

@@ -283,6 +283,7 @@ contract DN404Handler is SoladyTest {
                         transferCounter += 1;
                         assertEq(address(uint160(uint256(logs[i].topics[1]))), address(0), "from address does not match event");
                         assertEq(address(uint160(uint256(logs[i].topics[2]))), to, "to address does not match event");
+                        if (logs[i].topics.length > 3) assertEq(mirror.ownerAt(uint256(logs[i].topics[3])), to, "to address does not own minted id");
                     }
             }
         
@@ -306,14 +307,17 @@ contract DN404Handler is SoladyTest {
         }
     }
 
-    function mintNext(uint256 toIndexSeed, uint256 amount) internal {
+    function mintNext(uint256 toIndexSeed, uint256 amount) public {
         // PRE-CONDITIONS
         address to = randomAddress(toIndexSeed);
         amount = _bound(amount, 0, 100e18);
 
-        uint256 toBalanceBefore = dn404.balanceOf(to);
-        uint256 totalSupplyBefore = dn404.totalSupply();
-        uint256[] memory burnedIds = dn404.burnedPool();
+        BeforeAfter memory beforeAfter;
+        beforeAfter.toBalanceBefore = dn404.balanceOf(to);
+        beforeAfter.totalSupplyBefore = dn404.totalSupply();
+        beforeAfter.totalNFTSupplyBefore = mirror.totalSupply();
+        beforeAfter.toNFTBalanceBefore = dn404.balanceOfNFT(to);
+        beforeAfter.toAuxBefore = dn404.getAux(to);
 
         // ACTION
         vm.recordLogs();
@@ -321,31 +325,41 @@ contract DN404Handler is SoladyTest {
         
         // POST-CONDITIONS
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        uint256 id;
+        uint256 transferCounter;
         for (uint256 i = 0; i < logs.length; i++) {
             if (logs[i].topics[0] == keccak256("Transfer(address,address,uint256)")) {
-                // Grab minted ID from logs.
-                if (logs[i].topics.length > 3) id = uint256(logs[i].topics[3]);
-
-                for (uint j = 0; j < burnedIds.length; j++) {
-                    // ❌ Assert mintNext does not overlap with burned pool.
-                    // assertNotEq(burnedIds[j], id, "mint next went over burned ids");
-                }
+                transferCounter += 1;
+                assertEq(address(uint160(uint256(logs[i].topics[1]))), address(0), "from address does not match event");
+                assertEq(address(uint160(uint256(logs[i].topics[2]))), to, "to address does not match event");
+                if (logs[i].topics.length > 3) assertEq(mirror.ownerAt(uint256(logs[i].topics[3])), to, "to address does not own minted id");
             }
         }
 
+        beforeAfter.toBalanceAfter = dn404.balanceOf(to);
+        beforeAfter.totalSupplyAfter = dn404.totalSupply();
+        beforeAfter.totalNFTSupplyAfter = mirror.totalSupply();
+        beforeAfter.toAuxAfter = dn404.getAux(to);
+
         if (!dn404.getSkipNFT(to)) {
-            nftsOwned[to] = (toBalanceBefore + amount) / dn404.unit();
+            nftsOwned[to] = (beforeAfter.toBalanceBefore + amount) / dn404.unit();
             uint256[] memory tokensAfter = dn404.tokensOf(to);
             assertEq(tokensAfter.length, nftsOwned[to], "owned != len(tokensOf)");
+            assertEq(transferCounter - 1, _zeroFloorSub((beforeAfter.toBalanceAfter / dn404.unit()), beforeAfter.toNFTBalanceBefore), "# of times transfer emitted != mint loop iterations");
+        }
+        // If NFT was minted, ensure burned pool head and tail are 0.
+        if (transferCounter > 1) {
+            (uint256 head, uint256 tail) = dn404.burnedPoolHeadTail();
+            assertTrue(head == 0 && tail == 0, "Head or Tail != 0");
         }
 
-        uint256 toBalanceAfter = dn404.balanceOf(to);
-        uint256 totalSupplyAfter = dn404.totalSupply();
         // Assert user balance increased by minted amount.
-        assertEq(toBalanceAfter, toBalanceBefore + amount, "balance after != balance before + amount");
+        assertEq(beforeAfter.toBalanceAfter, beforeAfter.toBalanceBefore + amount, "balance after != balance before + amount");
         // Assert totalSupply increased by minted amount.
-        assertEq(totalSupplyBefore + amount, totalSupplyAfter, "supply before +amount != supply after");
+        assertEq(beforeAfter.totalSupplyBefore + amount, beforeAfter.totalSupplyAfter, "supply before +amount != supply after");
+        // Assert totalNFTSupply is at least equal to prior state before mint.
+        assertGe(beforeAfter.totalNFTSupplyAfter, beforeAfter.totalNFTSupplyBefore, "nft supply after < nft supply before");
+        // Assert auxiliary data is unchanged.
+        assertEq(beforeAfter.toAuxBefore, beforeAfter.toAuxAfter, "auxiliary data has changed");
     }
 
     function burn(uint256 fromIndexSeed, uint256 amount) public {

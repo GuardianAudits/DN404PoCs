@@ -122,7 +122,7 @@ contract DN404Handler is SoladyTest {
         uint256 numNFTBurns = _zeroFloorSub(mirror.balanceOf(from), (beforeAfter.fromBalanceBefore - amount) / dn404.unit());
         uint256 numNFTMints = _zeroFloorSub((beforeAfter.toBalanceBefore + amount) / dn404.unit(), mirror.balanceOf(to));
         uint256 n = _min(mirror.balanceOf(from), _min(numNFTBurns, numNFTMints));
-        uint256[] memory burnedIds = dn404.burnedPoolIds();
+        uint256[] memory burnedIds = dn404.burnedPool();
 
         // ACTION
         vm.recordLogs();
@@ -196,7 +196,7 @@ contract DN404Handler is SoladyTest {
         uint256 numNFTBurns = _zeroFloorSub(mirror.balanceOf(from), (beforeAfter.fromBalanceBefore - amount) / dn404.unit());
         uint256 numNFTMints = _zeroFloorSub((beforeAfter.toBalanceBefore + amount) / dn404.unit(), mirror.balanceOf(to));
         uint256 n = _min(mirror.balanceOf(from), _min(numNFTBurns, numNFTMints));
-        uint256[] memory burnedIds = dn404.burnedPoolIds();
+        uint256[] memory burnedIds = dn404.burnedPool();
 
         if (dn404.allowance(from, sender) < amount) {
             sender = from;
@@ -313,7 +313,7 @@ contract DN404Handler is SoladyTest {
 
         uint256 toBalanceBefore = dn404.balanceOf(to);
         uint256 totalSupplyBefore = dn404.totalSupply();
-        uint256[] memory burnedIds = dn404.burnedPoolIds();
+        uint256[] memory burnedIds = dn404.burnedPool();
 
         // ACTION
         vm.recordLogs();

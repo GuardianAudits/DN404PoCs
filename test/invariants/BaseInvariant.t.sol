@@ -76,7 +76,7 @@ abstract contract BaseInvariantTest is Test, StdInvariant {
 
     function invariantBurnedPoolLengthIsTailMinusHead() external {
         (uint256 burnedHead, uint256 burnedTail) = dn404.burnedPoolHeadTail();
-        uint256[] memory burnedIds = dn404.burnedPoolIds();
+        uint256[] memory burnedIds = dn404.burnedPool();
         assertEq(burnedIds.length, burnedTail - burnedHead, "burned ids length != burned tail - burned head");
     }
 

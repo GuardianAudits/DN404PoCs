@@ -9,7 +9,18 @@ import {MockDN404CustomUnit} from "../utils/mocks/MockDN404CustomUnit.sol";
 import {DN404Handler} from "./handlers/DN404Handler.sol";
 import {BaseInvariantTest} from "./BaseInvariant.t.sol";
 
-/// @notice Common invariant test setup for invariants that do not modify the unit post-initialization.
+// forgefmt: disable-start
+/**************************************************************************************************************************************/
+/*** Invariant Tests                                                                                                                ***/
+/***************************************************************************************************************************************
+
+    * NFT total supply * unit must always be less than or equal to the ERC20 total supply
+    * NFT balance of a user * unit must be less than or equal to the ERC20 balance of that user
+
+/**************************************************************************************************************************************/
+/*** Common invariant test setup for invariants that do not modify the unit post-initialization.                                    ***/
+/**************************************************************************************************************************************/
+// forgefmt: disable-end
 abstract contract StaticUnitInvariant is BaseInvariantTest {
 
     function setUp() public virtual override {
